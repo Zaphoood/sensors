@@ -357,6 +357,8 @@ class InputManager:
                 self.start_stop_grab()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return
             if self.grab_info is not None:
                 self.grab_info = None
             else:
