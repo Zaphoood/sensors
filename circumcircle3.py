@@ -274,8 +274,8 @@ class Circumcircle:
 class App:
     def __init__(self, screen_size: Tuple[int, int]) -> None:
         self.camera = Camera(
-            np.array([0.0, 1.0, -1.0]),
-            yaw=0.0,
+            np.array([0.8, 0.8, -1.0]),
+            yaw=-np.pi / 10,
             pitch=-np.pi / 8,
             focal_length=200,
             sensor_dimensions=screen_size,
