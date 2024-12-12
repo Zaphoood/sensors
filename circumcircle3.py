@@ -117,6 +117,12 @@ class Camera:
         """Move camera by offset according to view coordinate system"""
         self.position += get_rotation_matrix(self.yaw, self.pitch).dot(offset)
 
+    def change_pitch(self, offset: float) -> None:
+        self.pitch = np.clip(self.pitch + offset, -0.5 * np.pi, 0.5 * np.pi)
+
+    def change_yaw(self, offset: float) -> None:
+        self.yaw += offset
+
     def reset_position(self) -> None:
         self.position = np.copy(self._initial_position)
 
@@ -318,13 +324,13 @@ class InputManager:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                self.camera.yaw += self.camera_rotate_step
+                self.camera.change_yaw(self.camera_rotate_step)
             elif event.key == pygame.K_LEFT:
-                self.camera.yaw -= self.camera_rotate_step
+                self.camera.change_yaw(-self.camera_rotate_step)
             if event.key == pygame.K_UP:
-                self.camera.pitch += self.camera_rotate_step
+                self.camera.change_pitch(self.camera_rotate_step)
             elif event.key == pygame.K_DOWN:
-                self.camera.pitch -= self.camera_rotate_step
+                self.camera.change_pitch(-self.camera_rotate_step)
             elif event.key == pygame.K_w:
                 self.camera.move(np.array([0, 0, self.camera_rotate_step]))
             elif event.key == pygame.K_a:
