@@ -1,4 +1,4 @@
-from typing import List, Tuple, cast
+from typing import List, Optional, Sequence, Tuple, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -8,6 +8,7 @@ NODE_SIZE = 0.1
 
 WHITE = [255, 255, 255]
 BLACK = [0, 0, 0]
+RED = [255, 0, 0]
 
 Vector = npt.NDArray[np.float64]
 
@@ -110,9 +111,11 @@ class Node:
         position: Vector,
         # World size in meters
         size: float = NODE_SIZE,
+        color: Sequence[int] = BLACK,
     ) -> None:
         self.position = position
         self.size = size
+        self.color = color
 
     @property
     def x(self):
@@ -136,7 +139,7 @@ class Node:
         return points
 
     def draw(self, screen: pygame.Surface, camera: Camera) -> None:
-        pygame.draw.polygon(screen, BLACK, self.get_screen_polygon(camera), 1)
+        pygame.draw.polygon(screen, self.color, self.get_screen_polygon(camera), 1)
 
 
 def draw_line3d(
@@ -152,6 +155,86 @@ def draw_line3d(
     pygame.draw.line(screen, color, tuple(start2d), tuple(end2d), width)
 
 
+def draw_circle3d(
+    screen: pygame.Surface,
+    camera: Camera,
+    color,
+    center: Vector,
+    radius: float,
+    n_points: int,
+    width: int = 1,
+) -> None:
+    thetas = np.linspace(0, 2 * np.pi, n_points, endpoint=False)
+    xs = center + radius * np.cos(thetas)
+    ys = center + radius * np.sin(thetas)
+
+    for i in range(n_points):
+        current = (xs[i], ys[i])
+        next = (xs[(i + 1) % n_points], ys[(i + 1) % n_points])
+        pygame.draw.line(screen, color, current, next, width)
+
+
+class Circumcircle:
+    def __init__(self) -> None:
+        self.nodes = [
+            Node(np.array([0, 0, 0])),
+            Node(np.array([0, 1, 0])),
+            Node(np.array([1, 0, 0])),
+        ]
+
+    def handle_event(self, _: pygame.event.Event) -> None:
+        pass
+
+    def update(self) -> None:
+        pass
+
+    def draw(self, screen: pygame.Surface, camera: Camera) -> None:
+        for node in self.nodes:
+            node.draw(screen, camera)
+
+        params = self.get_circle_params()
+        if params is not None:
+            center, _ = params
+            center_node = Node(center, color=RED)
+            center_node.draw(screen, camera)
+            # TODO: draw circle
+
+    def get_circle_params(self) -> Optional[Tuple[Vector, Vector]]:
+        """Return `center, radius` of circle through the three nodes, if the
+        points aren't collinear. Return `None` if they are.
+
+        Note that `radius` is a vector from the center to a point on the boundary."""
+
+        a = self.nodes[0].position
+        b = self.nodes[1].position
+        c = self.nodes[2].position
+        a1, a2, a3 = a
+        b1, b2, b3 = b
+        c1, c2, c3 = c
+        a_norm2 = np.sum(a**2)
+        b_norm2 = np.sum(b**2)
+        c_norm2 = np.sum(c**2)
+
+        # Vector orthogonal to the plane spanned by vectors `b - a` and `c - a`
+        v = np.cross(b - a, c - a)
+
+        A = np.array(
+            [
+                [b1 - a1, b2 - a2, b3 - a3],
+                [c1 - b1, c2 - b2, c3 - b3],
+                v,
+            ]
+        )
+        rhs = np.array([0.5 * (b_norm2 - a_norm2), 0.5 * (c_norm2 - b_norm2), a.dot(v)])
+
+        try:
+            center = np.linalg.solve(A, rhs)
+        except np.linalg.LinAlgError:
+            return None
+
+        return cast(Vector, center), cast(Vector, a - center)
+
+
 class App:
     def __init__(self, screen_size: Tuple[int, int]) -> None:
         self.camera = Camera(
@@ -161,12 +244,7 @@ class App:
             focal_length=200,
             sensor_dimensions=screen_size,
         )
-        self.nodes = [
-            Node(np.array([0, 0, 0])),
-            Node(np.array([0, 0, 1])),
-            Node(np.array([0, 1, 0])),
-            Node(np.array([1, 0, 0])),
-        ]
+        self.circle = Circumcircle()
 
         self.move_step = 0.2
         self.rotate_step = np.pi / 20
@@ -204,12 +282,7 @@ class App:
 
     def draw(self, screen: pygame.Surface) -> None:
         screen.fill(WHITE)
-        for node in self.nodes:
-            node.draw(screen, self.camera)
-        for node in self.nodes[1:]:
-            draw_line3d(
-                screen, self.camera, BLACK, self.nodes[0].position, node.position
-            )
+        self.circle.draw(screen, self.camera)
 
 
 def main():
