@@ -401,27 +401,26 @@ class InputManager:
 
                 # Solve for the intersection of the ray through the new 2d
                 # position and the plane orthogonal to the vector from the
-                # camera origin to the position before the grab
+                # camera origin to the position before the grab. To do this, we
+                # set up a homogeneous system of equations.
                 d1, d2, d3 = new_ray
                 o1, o2, o3 = self.camera.position
                 A = np.array(
                     [
-                        [d2, -d1, 0],
-                        [0, d3, -d2],
-                        self.grab_info.start - self.camera.position,
+                        [d2, -d1, 0, -d2 * o1 + d1 * o2],
+                        [0, d3, -d2, -d3 * o2 + d2 * o3],
+                        [
+                            *(self.grab_info.start - self.camera.position),
+                            -np.dot(
+                                self.grab_info.start,
+                                self.grab_info.start - self.camera.position,
+                            ),
+                        ],
                     ]
                 )
-                b = np.array(
-                    [
-                        d2 * o1 - d1 * o2,
-                        d3 * o2 - d2 * o3,
-                        np.dot(
-                            self.grab_info.start,
-                            self.grab_info.start - self.camera.position,
-                        ),
-                    ]
-                )
-                new_pos3d = cast(Vector, np.linalg.solve(A, b))
+                # Solve by eigenvector corresponding to smalles eigenvalue
+                _, _, V = np.linalg.svd(A)
+                new_pos3d = cast(Vector, V[-1, :-1] / V[-1, -1])
 
                 self.nodes[self.selected_node].position = new_pos3d
 
