@@ -1,4 +1,5 @@
 from typing import List, Optional, Sequence, Tuple, Union, cast
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
@@ -298,13 +299,17 @@ class Circumcircle:
 
 
 class InputManager:
+    @dataclass
+    class GrabInfo:
+        # The position of the selected Node before the grab
+        start: Vector
+        # Offset of mouse from position of grabbed node on screen
+        mouse_offset: npt.NDArray[np.int64]
+
     def __init__(self, nodes: List[Node], camera: Camera):
         self.nodes = nodes
         self.selected_node: Optional[int] = None
-        # While grabbing a Node, it's set to the position before the grab. Is `None` iff. not grabbing
-        self.grab_start: Optional[Vector] = None
-        # While grabbing, set to offset of mouse from position of grabbed node on screen
-        self.mouse_grab_offset: Optional[npt.NDArray[np.int64]] = None
+        self.grab_info: Optional[InputManager.GrabInfo] = None
         self.camera = camera
 
         self.camera_move_step = 0.2
@@ -341,59 +346,57 @@ class InputManager:
                     self.camera.reset_position()
                     self.camera.reset_orientation()
             elif event.key == pygame.K_ESCAPE:
-                if self.grab_start is None:
+                if self.grab_info is None:
                     self.selected_node = None
                 else:
                     assert self.selected_node is not None
-                    self.nodes[self.selected_node].position = self.grab_start
+                    self.nodes[self.selected_node].position = self.grab_info.start
 
-                    self.grab_start = None
-                    self.mouse_grab_offset = None
+                    self.grab_info = None
             elif event.key == pygame.K_g:
                 if self.selected_node is None:
                     return
 
                 grabbed_node = self.nodes[self.selected_node]
-                self.grab_start = grabbed_node.position
 
                 mouse_pos = np.array(pygame.mouse.get_pos())
                 grabbed_node2d = self.camera.world_to_screen(grabbed_node.position)
-                self.mouse_grab_offset = np.round(mouse_pos - grabbed_node2d).astype(
-                    int
+                self.grab_info = InputManager.GrabInfo(
+                    start=grabbed_node.position,
+                    mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
                 )
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if self.grab_start is None:
-                ray = self.camera.screen_to_world(event.pos)
-                close_candidates = []
-                for i, node in enumerate(self.nodes):
-                    closest_coords, _ = closest_point_on_ray(
-                        self.camera.position, ray, node.position
-                    )
-                    dist_to_node = np.linalg.norm(closest_coords - node.position)
-                    if dist_to_node <= NODE_HITBOX:
-                        close_candidates.append((i, dist_to_node))
+            if self.grab_info is not None:
+                self.grab_info = None
+                return
 
-                if self.selected_node is not None:
-                    self.nodes[self.selected_node].on_deselect()
-                if len(close_candidates) == 0:
-                    self.selected_node = None
-                else:
-                    self.selected_node = cast(
-                        int, min(close_candidates, key=lambda el: el[1])[0]
-                    )
-                    self.nodes[self.selected_node].on_select()
+            ray = self.camera.screen_to_world(event.pos)
+            close_candidates = []
+            for i, node in enumerate(self.nodes):
+                closest_coords, _ = closest_point_on_ray(
+                    self.camera.position, ray, node.position
+                )
+                dist_to_node = np.linalg.norm(closest_coords - node.position)
+                if dist_to_node <= NODE_HITBOX:
+                    close_candidates.append((i, dist_to_node))
+
+            if self.selected_node is not None:
+                self.nodes[self.selected_node].on_deselect()
+            if len(close_candidates) == 0:
+                self.selected_node = None
             else:
-                self.grab_start = None
-                self.mouse_grab_offset = None
+                self.selected_node = cast(
+                    int, min(close_candidates, key=lambda el: el[1])[0]
+                )
+                self.nodes[self.selected_node].on_select()
 
         elif event.type == pygame.MOUSEMOTION:
-            if self.grab_start is not None:
+            if self.grab_info is not None:
                 assert self.selected_node is not None
-                assert self.mouse_grab_offset is not None
 
                 mouse_pos = np.array(event.pos, dtype=np.int64)
-                new_pos2d = mouse_pos - self.mouse_grab_offset
+                new_pos2d = mouse_pos - self.grab_info.mouse_offset
                 new_ray = self.camera.screen_to_world(new_pos2d.astype(np.float64))
 
                 # Solve for the intersection of the ray through the new 2d
@@ -405,14 +408,17 @@ class InputManager:
                     [
                         [d2, -d1, 0],
                         [0, d3, -d2],
-                        self.grab_start - self.camera.position,
+                        self.grab_info.start - self.camera.position,
                     ]
                 )
                 b = np.array(
                     [
                         d2 * o1 - d1 * o2,
                         d3 * o2 - d2 * o3,
-                        np.dot(self.grab_start, self.grab_start - self.camera.position),
+                        np.dot(
+                            self.grab_info.start,
+                            self.grab_info.start - self.camera.position,
+                        ),
                     ]
                 )
                 new_pos3d = cast(Vector, np.linalg.solve(A, b))
