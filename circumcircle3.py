@@ -1,5 +1,5 @@
-from typing import List, Optional, Sequence, Tuple, Union, cast
 from dataclasses import dataclass
+from typing import List, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -354,75 +354,84 @@ class InputManager:
 
                     self.grab_info = None
             elif event.key == pygame.K_g:
-                if self.selected_node is None:
-                    return
-
-                grabbed_node = self.nodes[self.selected_node]
-
-                mouse_pos = np.array(pygame.mouse.get_pos())
-                grabbed_node2d = self.camera.world_to_screen(grabbed_node.position)
-                self.grab_info = InputManager.GrabInfo(
-                    start=grabbed_node.position,
-                    mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
-                )
+                self.start_stop_grab()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.grab_info is not None:
                 self.grab_info = None
-                return
-
-            ray = self.camera.screen_to_world(event.pos)
-            close_candidates = []
-            for i, node in enumerate(self.nodes):
-                closest_coords, _ = closest_point_on_ray(
-                    self.camera.position, ray, node.position
-                )
-                dist_to_node = np.linalg.norm(closest_coords - node.position)
-                if dist_to_node <= NODE_HITBOX:
-                    close_candidates.append((i, dist_to_node))
-
-            if self.selected_node is not None:
-                self.nodes[self.selected_node].on_deselect()
-            if len(close_candidates) == 0:
-                self.selected_node = None
             else:
-                self.selected_node = cast(
-                    int, min(close_candidates, key=lambda el: el[1])[0]
-                )
-                self.nodes[self.selected_node].on_select()
-
+                self.handle_mouse_select(event)
         elif event.type == pygame.MOUSEMOTION:
-            if self.grab_info is not None:
-                assert self.selected_node is not None
+            self.handle_mouse_move(event.pos)
 
-                mouse_pos = np.array(event.pos, dtype=np.int64)
-                new_pos2d = mouse_pos - self.grab_info.mouse_offset
-                new_ray = self.camera.screen_to_world(new_pos2d.astype(np.float64))
+    def start_stop_grab(self) -> None:
+        if self.selected_node is None:
+            return
 
-                # Solve for the intersection of the ray through the new 2d
-                # position and the plane orthogonal to the vector from the
-                # camera origin to the position before the grab. To do this, we
-                # set up a homogeneous system of equations.
-                d1, d2, d3 = new_ray
-                o1, o2, o3 = self.camera.position
-                A = np.array(
-                    [
-                        [d2, -d1, 0, -d2 * o1 + d1 * o2],
-                        [0, d3, -d2, -d3 * o2 + d2 * o3],
-                        [
-                            *(self.grab_info.start - self.camera.position),
-                            -np.dot(
-                                self.grab_info.start,
-                                self.grab_info.start - self.camera.position,
-                            ),
-                        ],
-                    ]
-                )
-                # Solve by eigenvector corresponding to smalles eigenvalue
-                _, _, V = np.linalg.svd(A)
-                new_pos3d = cast(Vector, V[-1, :-1] / V[-1, -1])
+        grabbed_node = self.nodes[self.selected_node]
 
-                self.nodes[self.selected_node].position = new_pos3d
+        mouse_pos = np.array(pygame.mouse.get_pos())
+        grabbed_node2d = self.camera.world_to_screen(grabbed_node.position)
+        self.grab_info = InputManager.GrabInfo(
+            start=grabbed_node.position,
+            mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
+        )
+
+    def handle_mouse_select(self, event: pygame.event.Event) -> None:
+        ray = self.camera.screen_to_world(event.pos)
+        close_candidates = []
+        for i, node in enumerate(self.nodes):
+            closest_coords, _ = closest_point_on_ray(
+                self.camera.position, ray, node.position
+            )
+            dist_to_node = np.linalg.norm(closest_coords - node.position)
+            if dist_to_node <= NODE_HITBOX:
+                close_candidates.append((i, dist_to_node))
+
+        if self.selected_node is not None:
+            self.nodes[self.selected_node].on_deselect()
+        if len(close_candidates) == 0:
+            self.selected_node = None
+        else:
+            self.selected_node = cast(
+                int, min(close_candidates, key=lambda el: el[1])[0]
+            )
+            self.nodes[self.selected_node].on_select()
+
+    def handle_mouse_move(self, new_mouse_pos: Tuple[int, int]) -> None:
+        if self.grab_info is None:
+            return
+
+        assert self.selected_node is not None
+
+        mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
+        new_pos2d = mouse_pos - self.grab_info.mouse_offset
+        new_ray = self.camera.screen_to_world(new_pos2d.astype(np.float64))
+
+        # Solve for the intersection of the ray through the new 2d
+        # position and the plane orthogonal to the vector from the
+        # camera origin to the position before the grab. To do this, we
+        # set up a homogeneous system of equations.
+        d1, d2, d3 = new_ray
+        o1, o2, o3 = self.camera.position
+        A = np.array(
+            [
+                [d2, -d1, 0, -d2 * o1 + d1 * o2],
+                [0, d3, -d2, -d3 * o2 + d2 * o3],
+                [
+                    *(self.grab_info.start - self.camera.position),
+                    -np.dot(
+                        self.grab_info.start,
+                        self.grab_info.start - self.camera.position,
+                    ),
+                ],
+            ]
+        )
+        # Solve by eigenvector corresponding to smalles eigenvalue
+        _, _, V = np.linalg.svd(A)
+        new_pos3d = cast(Vector, V[-1, :-1] / V[-1, -1])
+
+        self.nodes[self.selected_node].position = new_pos3d
 
 
 def closest_point_on_ray(
@@ -462,7 +471,6 @@ class App:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-
             self.input_manager.handle_event(event)
 
         return True
