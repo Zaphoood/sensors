@@ -143,6 +143,16 @@ class Node:
         pygame.draw.polygon(screen, self.color, self.get_screen_polygon(camera), 1)
 
 
+class CoordinateAxes:
+    def __init__(self, color: Color) -> None:
+        self.color = color
+
+    def draw(self, screen: pygame.Surface, camera: Camera) -> None:
+        origin = np.array([0, 0, 0])
+        for endpoint in [[1, 0, 0], [0, 1, 0], [0, 0, 1]]:
+            draw_line3d(screen, camera, self.color, origin, np.array(endpoint))
+
+
 def draw_line3d(
     screen: pygame.Surface,
     camera: Camera,
@@ -192,12 +202,13 @@ def draw_circle3d(
 
 
 class Circumcircle:
-    def __init__(self) -> None:
+    def __init__(self, color: Color) -> None:
         self.nodes = [
             Node(np.array([0, 0, 0])),
             Node(np.array([0, 1, 1])),
             Node(np.array([1, 0, 0])),
         ]
+        self.color = color
 
     def handle_event(self, _: pygame.event.Event) -> None:
         pass
@@ -212,9 +223,11 @@ class Circumcircle:
         params = self.get_circle_params()
         if params is not None:
             center, normal, radius = params
-            center_node = Node(center, color=RED)
+            center_node = Node(center, color=self.color)
             center_node.draw(screen, camera)
-            draw_circle3d(screen, camera, RED, center, normal, radius, n_points=20)
+            draw_circle3d(
+                screen, camera, self.color, center, normal, radius, n_points=20
+            )
 
     def get_circle_params(self) -> Optional[Tuple[Vector, Vector, float]]:
         """Return `center, normal, radius` of circle through the three nodes, if the
@@ -267,7 +280,8 @@ class App:
             focal_length=200,
             sensor_dimensions=screen_size,
         )
-        self.circle = Circumcircle()
+        self.circle = Circumcircle(RED)
+        self.coordinate_axes = CoordinateAxes(BLACK)
 
         self.move_step = 0.2
         self.rotate_step = np.pi / 20
@@ -305,6 +319,7 @@ class App:
 
     def draw(self, screen: pygame.Surface) -> None:
         screen.fill(WHITE)
+        self.coordinate_axes.draw(screen, self.camera)
         self.circle.draw(screen, self.camera)
 
 
