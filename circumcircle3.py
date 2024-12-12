@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Tuple, cast
+from typing import List, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -11,6 +11,7 @@ BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
 Vector = npt.NDArray[np.float64]
+Color = Union[Tuple[int, int, int], List[int]]
 
 cos = np.cos
 sin = np.sin
@@ -145,7 +146,7 @@ class Node:
 def draw_line3d(
     screen: pygame.Surface,
     camera: Camera,
-    color,
+    color: Color,
     start: Vector,
     end: Vector,
     width: int = 1,
@@ -158,27 +159,43 @@ def draw_line3d(
 def draw_circle3d(
     screen: pygame.Surface,
     camera: Camera,
-    color,
+    color: Color,
     center: Vector,
+    normal: Vector,
     radius: float,
     n_points: int,
     width: int = 1,
 ) -> None:
-    thetas = np.linspace(0, 2 * np.pi, n_points, endpoint=False)
-    xs = center + radius * np.cos(thetas)
-    ys = center + radius * np.sin(thetas)
+    n1, n2, n3 = normal
+    # Construct two vectors orthogonal to the normal and to each other, to use as basis for circle points
+    if np.isclose(n1, 0):
+        orth1 = np.array([1.0, 0.0, 0.0])
+    elif np.isclose(n2, 0):
+        orth1 = np.array([0.0, 1.0, 0.0])
+    elif np.isclose(n3, 0):
+        orth1 = np.array([0.0, 0.0, 1.0])
+    else:
+        orth1 = np.array([n2 * n3, -2 * n1 * n3, n1 * n2])
+    orth1 /= np.linalg.norm(orth1)
+    orth2 = np.cross(normal, orth1)
 
-    for i in range(n_points):
-        current = (xs[i], ys[i])
-        next = (xs[(i + 1) % n_points], ys[(i + 1) % n_points])
-        pygame.draw.line(screen, color, current, next, width)
+    angles = np.linspace(0, 2 * np.pi, n_points + 1)
+    starts = center + radius * (
+        np.cos(angles[:-1, np.newaxis]) * orth1
+        + np.sin(angles[:-1, np.newaxis]) * orth2
+    )
+    ends = center + radius * (
+        np.cos(angles[1:, np.newaxis]) * orth1 + np.sin(angles[1:, np.newaxis]) * orth2
+    )
+    for start, end in zip(starts, ends):
+        draw_line3d(screen, camera, color, start, end, width)
 
 
 class Circumcircle:
     def __init__(self) -> None:
         self.nodes = [
             Node(np.array([0, 0, 0])),
-            Node(np.array([0, 1, 0])),
+            Node(np.array([0, 1, 1])),
             Node(np.array([1, 0, 0])),
         ]
 
@@ -194,16 +211,14 @@ class Circumcircle:
 
         params = self.get_circle_params()
         if params is not None:
-            center, _ = params
+            center, normal, radius = params
             center_node = Node(center, color=RED)
             center_node.draw(screen, camera)
-            # TODO: draw circle
+            draw_circle3d(screen, camera, RED, center, normal, radius, n_points=20)
 
-    def get_circle_params(self) -> Optional[Tuple[Vector, Vector]]:
-        """Return `center, radius` of circle through the three nodes, if the
-        points aren't collinear. Return `None` if they are.
-
-        Note that `radius` is a vector from the center to a point on the boundary."""
+    def get_circle_params(self) -> Optional[Tuple[Vector, Vector, float]]:
+        """Return `center, normal, radius` of circle through the three nodes, if the
+        points aren't collinear. Return `None` if they are."""
 
         a = self.nodes[0].position
         b = self.nodes[1].position
@@ -216,31 +231,39 @@ class Circumcircle:
         c_norm2 = np.sum(c**2)
 
         # Vector orthogonal to the plane spanned by vectors `b - a` and `c - a`
-        v = np.cross(b - a, c - a)
+        normal = np.cross(b - a, c - a)
 
         A = np.array(
             [
                 [b1 - a1, b2 - a2, b3 - a3],
                 [c1 - b1, c2 - b2, c3 - b3],
-                v,
+                normal,
             ]
         )
-        rhs = np.array([0.5 * (b_norm2 - a_norm2), 0.5 * (c_norm2 - b_norm2), a.dot(v)])
+        rhs = np.array(
+            [0.5 * (b_norm2 - a_norm2), 0.5 * (c_norm2 - b_norm2), a.dot(normal)]
+        )
 
         try:
             center = np.linalg.solve(A, rhs)
         except np.linalg.LinAlgError:
             return None
 
-        return cast(Vector, center), cast(Vector, a - center)
+        radius = np.linalg.norm(center - a)
+
+        return (
+            cast(Vector, center),
+            cast(Vector, normal / np.linalg.norm(normal)),
+            cast(np.float64, radius),
+        )
 
 
 class App:
     def __init__(self, screen_size: Tuple[int, int]) -> None:
         self.camera = Camera(
-            np.array([0.0, 0.0, -2.0]),
+            np.array([0.0, 1.0, -1.0]),
             yaw=0.0,
-            pitch=0.0,
+            pitch=-np.pi / 8,
             focal_length=200,
             sensor_dimensions=screen_size,
         )
