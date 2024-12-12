@@ -24,14 +24,25 @@ def to_homogeneous(v: Vector) -> Vector:
 
 
 def get_rotation_matrix(theta: float, rho: float):
+    sin = np.sin
+    cos = np.cos
 
-    return np.array(
+    R_xz = np.array(
         [
-            [cos(theta), -sin(theta) * sin(rho), sin(theta) * cos(rho)],
-            [0, cos(rho), sin(rho)],
-            [-sin(theta), -cos(theta) * sin(rho), cos(theta) * cos(rho)],
+            [cos(theta), 0, sin(theta)],
+            [0, 1, 0],
+            [-sin(theta), 0, cos(theta)],
         ]
     )
+    R_yz = np.array(
+        [
+            [1, 0, 0],
+            [0, cos(rho), sin(rho)],
+            [0, -sin(rho), cos(rho)],
+        ]
+    )
+
+    return R_yz.dot(R_xz)
 
 
 class Camera:
@@ -39,14 +50,17 @@ class Camera:
         self,
         position: Vector,
         yaw: float,
-        ptich: float,
+        pitch: float,
         focal_length: float,
         sensor_dimensions: Tuple[int, int],
     ):
         self.position = position
+        self._initial_position = np.copy(self.position)
 
         self.yaw = yaw
-        self.pitch = ptich
+        self.pitch = pitch
+        self._initial_yaw = yaw
+        self._initial_pitch = pitch
 
         self.focal_length = focal_length
 
@@ -82,6 +96,13 @@ class Camera:
         """Move camera by offset according to view coordinate system"""
         self.position += get_rotation_matrix(self.yaw, self.pitch).dot(offset)
 
+    def reset_position(self) -> None:
+        self.position = np.copy(self._initial_position)
+
+    def reset_orientation(self) -> None:
+        self.yaw = self._initial_yaw
+        self.pitch = self._initial_pitch
+
 
 class Node:
     def __init__(
@@ -89,12 +110,9 @@ class Node:
         position: Vector,
         # World size in meters
         size: float = NODE_SIZE,
-        # hitbox_size: int = NODE_HITBOX,
     ) -> None:
         self.position = position
         self.size = size
-        # self.hitbox_size = hitbox_size
-        # self.grab_offset: None | Vector = None
 
     @property
     def x(self):
@@ -121,12 +139,25 @@ class Node:
         pygame.draw.polygon(screen, BLACK, self.get_screen_polygon(camera), 1)
 
 
+def draw_line3d(
+    screen: pygame.Surface,
+    camera: Camera,
+    color,
+    start: Vector,
+    end: Vector,
+    width: int = 1,
+) -> None:
+    start2d = camera.point_to_screen(start)
+    end2d = camera.point_to_screen(end)
+    pygame.draw.line(screen, color, tuple(start2d), tuple(end2d), width)
+
+
 class App:
     def __init__(self, screen_size: Tuple[int, int]) -> None:
         self.camera = Camera(
             np.array([0.0, 0.0, -2.0]),
             yaw=0.0,
-            ptich=0.0,
+            pitch=0.0,
             focal_length=200,
             sensor_dimensions=screen_size,
         )
@@ -165,6 +196,9 @@ class App:
                     self.camera.move(np.array([0, self.rotate_step, 0]))
                 elif event.key == pygame.K_e:
                     self.camera.move(np.array([0, -self.rotate_step, 0]))
+                elif event.key == pygame.K_r:
+                    self.camera.reset_position()
+                    self.camera.reset_orientation()
 
         return True
 
@@ -172,6 +206,10 @@ class App:
         screen.fill(WHITE)
         for node in self.nodes:
             node.draw(screen, self.camera)
+        for node in self.nodes[1:]:
+            draw_line3d(
+                screen, self.camera, BLACK, self.nodes[0].position, node.position
+            )
 
 
 def main():
