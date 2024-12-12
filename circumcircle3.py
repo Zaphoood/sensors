@@ -5,10 +5,12 @@ import numpy.typing as npt
 import pygame
 
 NODE_SIZE = 0.1
+NODE_HITBOX = 0.3
 
 WHITE = [255, 255, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
+BLUE = [0, 0, 255]
 
 Vector = npt.NDArray[np.float64]
 Color = Union[Tuple[int, int, int], List[int]]
@@ -66,12 +68,12 @@ class Camera:
 
         self.focal_length = focal_length
 
-        t_x = sensor_dimensions[0] / 2
-        t_y = sensor_dimensions[1] / 2
+        self.t_x = sensor_dimensions[0] / 2
+        self.t_y = sensor_dimensions[1] / 2
         self.calibration_matrix = np.array(
             [
-                [self.focal_length, 0, t_x],
-                [0, -self.focal_length, t_y],
+                [self.focal_length, 0, self.t_x],
+                [0, -self.focal_length, self.t_y],
                 [0, 0, 1],
             ]
         )
@@ -82,17 +84,29 @@ class Camera:
 
         return get_rotation_matrix(-self.yaw, -self.pitch)
 
-    def point_to_screen(self, point3d: Vector) -> Vector:
-        """Map 3D point to pixel coordinates on camera sensor"""
+    def world_to_screen(self, point3d: Vector) -> Optional[Vector]:
+        """Map 3D point to pixel coordinates on camera sensor. Return `None` if the point lies behind the camera."""
 
         # From world to camera coordinate system
         point3d_offset = cast(Vector, point3d - self.position)
         point3d_camera_coords = self.rotation_matrix.dot(point3d_offset)
+        if point3d_camera_coords[2] <= 0:
+            return None
 
         # Camera coordinate to pixel on 'image sensor'
         point2d_homo = self.calibration_matrix.dot(point3d_camera_coords)
 
         return normalize_homogeneous(point2d_homo)
+
+    def screen_to_world(self, point2d: Vector) -> Vector:
+        """Map a 2D point on the camera sensor to a unit vector defining the view ray"""
+        ray_camera_coords = np.array(
+            [point2d[0] - self.t_x, -(point2d[1] - self.t_y), self.focal_length]
+        )
+        ray_world_coords = get_rotation_matrix(self.yaw, self.pitch).dot(
+            ray_camera_coords
+        )
+        return ray_world_coords / np.linalg.norm(ray_world_coords)
 
     def move(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""
@@ -117,6 +131,7 @@ class Node:
         self.position = position
         self.size = size
         self.color = color
+        self.selected = False
 
     @property
     def x(self):
@@ -130,17 +145,33 @@ class Node:
     def z(self):
         return self.position[2]
 
-    def get_screen_polygon(self, camera: Camera) -> List[Tuple[float, float]]:
-        points = []
+    def get_screen_polygon(self, camera: Camera) -> Optional[List[Vector]]:
+        points: List[Vector] = []
         for dx, dy in [(-1, -1), (1, -1), (1, 1), (-1, 1)]:
             offset = (np.array([self.size, self.size, 0]) / 2) * np.array([dx, dy, 0])
             corner = self.position + offset
-            points.append(camera.point_to_screen(cast(Vector, corner)))
+            point2d = camera.world_to_screen(cast(Vector, corner))
+            if point2d is None:
+                return None
+            points.append(point2d)
 
         return points
 
+    def on_select(self) -> None:
+        self.selected = True
+
+    def on_deselect(self) -> None:
+        self.selected = False
+
     def draw(self, screen: pygame.Surface, camera: Camera) -> None:
-        pygame.draw.polygon(screen, self.color, self.get_screen_polygon(camera), 1)
+        screen_polygon = self.get_screen_polygon(camera)
+        if screen_polygon:
+            pygame.draw.polygon(
+                screen,
+                self.color,
+                [tuple(corner) for corner in screen_polygon],
+                0 if self.selected else 1,
+            )
 
 
 class CoordinateAxes:
@@ -161,9 +192,10 @@ def draw_line3d(
     end: Vector,
     width: int = 1,
 ) -> None:
-    start2d = camera.point_to_screen(start)
-    end2d = camera.point_to_screen(end)
-    pygame.draw.line(screen, color, tuple(start2d), tuple(end2d), width)
+    start2d = camera.world_to_screen(start)
+    end2d = camera.world_to_screen(end)
+    if start2d is not None and end2d is not None:
+        pygame.draw.line(screen, color, tuple(start2d), tuple(end2d), width)
 
 
 def draw_circle3d(
@@ -202,19 +234,9 @@ def draw_circle3d(
 
 
 class Circumcircle:
-    def __init__(self, color: Color) -> None:
-        self.nodes = [
-            Node(np.array([0, 0, 0])),
-            Node(np.array([0, 1, 1])),
-            Node(np.array([1, 0, 0])),
-        ]
+    def __init__(self, nodes: List[Node], color: Color) -> None:
+        self.nodes = nodes
         self.color = color
-
-    def handle_event(self, _: pygame.event.Event) -> None:
-        pass
-
-    def update(self) -> None:
-        pass
 
     def draw(self, screen: pygame.Surface, camera: Camera) -> None:
         for node in self.nodes:
@@ -271,6 +293,83 @@ class Circumcircle:
         )
 
 
+class InputManager:
+    def __init__(self, nodes: List[Node], camera: Camera):
+        self.nodes = nodes
+        self.selected_node: Optional[int] = None
+        self.camera = camera
+
+        self.camera_move_step = 0.2
+        self.camera_rotate_step = np.pi / 20
+        self.closest_node: Optional[Node] = None
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                self.camera.yaw += self.camera_rotate_step
+            elif event.key == pygame.K_LEFT:
+                self.camera.yaw -= self.camera_rotate_step
+            if event.key == pygame.K_UP:
+                self.camera.pitch += self.camera_rotate_step
+            elif event.key == pygame.K_DOWN:
+                self.camera.pitch -= self.camera_rotate_step
+            elif event.key == pygame.K_w:
+                self.camera.move(np.array([0, 0, self.camera_rotate_step]))
+            elif event.key == pygame.K_a:
+                self.camera.move(np.array([-self.camera_rotate_step, 0, 0]))
+            elif event.key == pygame.K_s:
+                self.camera.move(np.array([0, 0, -self.camera_rotate_step]))
+            elif event.key == pygame.K_d:
+                self.camera.move(np.array([self.camera_rotate_step, 0, 0]))
+            elif event.key == pygame.K_y:
+                self.camera.move(np.array([0, self.camera_rotate_step, 0]))
+            elif event.key == pygame.K_e:
+                self.camera.move(np.array([0, -self.camera_rotate_step, 0]))
+            elif event.key == pygame.K_r:
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.camera.position = np.array([0.0, 0.0, -1.0])
+                    self.camera.pitch = 0.0
+                    self.camera.yaw = 0.0
+                else:
+                    self.camera.reset_position()
+                    self.camera.reset_orientation()
+            elif event.key == pygame.K_ESCAPE:
+                self.selected_node = None
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            ray = self.camera.screen_to_world(event.pos)
+            close_candidates = []
+            for i, node in enumerate(self.nodes):
+                closest_coords, _ = closest_point_on_ray(
+                    self.camera.position, ray, node.position
+                )
+                dist_to_node = np.linalg.norm(closest_coords - node.position)
+                if dist_to_node <= NODE_HITBOX:
+                    close_candidates.append((i, dist_to_node))
+
+            if self.selected_node is not None:
+                self.nodes[self.selected_node].on_deselect()
+            if len(close_candidates) == 0:
+                self.selected_node = None
+            else:
+                self.selected_node = cast(
+                    int, min(close_candidates, key=lambda el: el[1])[0]
+                )
+                self.nodes[self.selected_node].on_select()
+
+
+def closest_point_on_ray(
+    origin: Vector, direction: Vector, point: Vector
+) -> Tuple[Vector, float]:
+    """Given a ray and a point, return the coordinates of the point on the ray
+    which is closest to it, as well as the factor lambda in the equation
+    `origin + lambda * direction = closest`. Note that `direction` must be of
+    unit length.
+    """
+    lamda = -(origin - point).dot(direction)
+
+    return origin + lamda * direction, lamda
+
+
 class App:
     def __init__(self, screen_size: Tuple[int, int]) -> None:
         self.camera = Camera(
@@ -280,40 +379,22 @@ class App:
             focal_length=200,
             sensor_dimensions=screen_size,
         )
-        self.circle = Circumcircle(RED)
+        self.nodes = [
+            Node(np.array([0, 0, 0])),
+            Node(np.array([0, 1, 1])),
+            Node(np.array([1, 0, 0])),
+        ]
+        self.circle = Circumcircle(self.nodes, RED)
         self.coordinate_axes = CoordinateAxes(BLACK)
 
-        self.move_step = 0.2
-        self.rotate_step = np.pi / 20
+        self.input_manager = InputManager(self.nodes, self.camera)
 
     def update(self) -> bool:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RIGHT:
-                    self.camera.yaw += self.rotate_step
-                elif event.key == pygame.K_LEFT:
-                    self.camera.yaw -= self.rotate_step
-                if event.key == pygame.K_UP:
-                    self.camera.pitch += self.rotate_step
-                elif event.key == pygame.K_DOWN:
-                    self.camera.pitch -= self.rotate_step
-                elif event.key == pygame.K_w:
-                    self.camera.move(np.array([0, 0, self.rotate_step]))
-                elif event.key == pygame.K_a:
-                    self.camera.move(np.array([-self.rotate_step, 0, 0]))
-                elif event.key == pygame.K_s:
-                    self.camera.move(np.array([0, 0, -self.rotate_step]))
-                elif event.key == pygame.K_d:
-                    self.camera.move(np.array([self.rotate_step, 0, 0]))
-                elif event.key == pygame.K_y:
-                    self.camera.move(np.array([0, self.rotate_step, 0]))
-                elif event.key == pygame.K_e:
-                    self.camera.move(np.array([0, -self.rotate_step, 0]))
-                elif event.key == pygame.K_r:
-                    self.camera.reset_position()
-                    self.camera.reset_orientation()
+
+            self.input_manager.handle_event(event)
 
         return True
 
@@ -321,6 +402,8 @@ class App:
         screen.fill(WHITE)
         self.coordinate_axes.draw(screen, self.camera)
         self.circle.draw(screen, self.camera)
+        if self.input_manager.closest_node is not None:
+            self.input_manager.closest_node.draw(screen, self.camera)
 
 
 def main():
