@@ -301,7 +301,6 @@ class InputManager:
 
         self.camera_move_step = 0.2
         self.camera_rotate_step = np.pi / 20
-        self.closest_node: Optional[Node] = None
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
@@ -402,8 +401,6 @@ class App:
         screen.fill(WHITE)
         self.coordinate_axes.draw(screen, self.camera)
         self.circle.draw(screen, self.camera)
-        if self.input_manager.closest_node is not None:
-            self.input_manager.closest_node.draw(screen, self.camera)
 
 
 def main():
