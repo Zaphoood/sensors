@@ -143,12 +143,11 @@ class Camera:
     def orbit(self, delta_pitch: float, delta_yaw: float) -> None:
         """Orbit camera around orbit center (world origin) by `pitch` and `yaw`"""
         self.position = (
-            get_rotation_matrix(
+            get_rotation_matrix_xz(
                 self.yaw + delta_yaw,
-                0,
             ).dot(
-                get_rotation_matrix(0, delta_pitch).dot(
-                    get_rotation_matrix(-self.yaw, 0)
+                get_rotation_matrix_yz(delta_pitch).dot(
+                    get_rotation_matrix_xz(-self.yaw)
                 )
             )
         ).dot(self.position)
@@ -167,11 +166,10 @@ class Camera:
         """Orbit camera around orbit center (world origin), starting from a given initial configuration to some new pitch and yaw"""
         new_pitch = self.clip_pitch(new_pitch)
         self.position = (
-            get_rotation_matrix(
+            get_rotation_matrix_xz(
                 new_yaw,
-                0,
             ).dot(
-                get_rotation_matrix(0, new_pitch).dot(
+                get_rotation_matrix_yz(new_pitch).dot(
                     get_rotation_matrix(-initial_yaw, -initial_pitch)
                 )
             )
