@@ -28,26 +28,34 @@ def to_homogeneous(v: Vector) -> Vector:
     return np.concatenate([v, [1]])
 
 
-def get_rotation_matrix(theta: float, rho: float):
-    """Return the matrix with rotates a vector by `theta` about the y-axis and `rho` about the x-axis"""
+def get_rotation_matrix_xz(theta: float):
+    """Return the matrix with rotates a vector by `theta` about the y-axis"""
 
-    sin = np.sin
-    cos = np.cos
-
-    R_xz = np.array(
+    return np.array(
         [
-            [cos(theta), 0, sin(theta)],
+            [np.cos(theta), 0, np.sin(theta)],
             [0, 1, 0],
-            [-sin(theta), 0, cos(theta)],
+            [-np.sin(theta), 0, np.cos(theta)],
         ]
     )
-    R_yz = np.array(
+
+
+def get_rotation_matrix_yz(rho: float):
+    """Return the matrix with rotates a vector by `rho` about the x-axis"""
+
+    return np.array(
         [
             [1, 0, 0],
-            [0, cos(rho), sin(rho)],
-            [0, -sin(rho), cos(rho)],
+            [0, np.cos(rho), np.sin(rho)],
+            [0, -np.sin(rho), np.cos(rho)],
         ]
     )
+
+
+def get_rotation_matrix(theta: float, rho: float):
+    """Return the matrix with rotates a vector by `theta` about the y-axis and `rho` about the x-axis"""
+    R_xz = get_rotation_matrix_xz(theta)
+    R_yz = get_rotation_matrix_yz(rho)
 
     return R_yz.dot(R_xz)
 
@@ -124,14 +132,16 @@ class Camera:
         return get_rotation_matrix(self.yaw, self.pitch).dot(vector)
 
     def change_pitch(self, delta_pitch: float) -> None:
-        self.pitch = np.clip(self.pitch + delta_pitch, -0.5 * np.pi, 0.5 * np.pi)
+        self.pitch = self.clip_pitch(self.pitch + delta_pitch)
+
+    def clip_pitch(self, pitch: float) -> float:
+        return np.clip(pitch, -0.5 * np.pi, 0.5 * np.pi)
 
     def change_yaw(self, delta_yaw: float) -> None:
         self.yaw += delta_yaw
 
     def orbit(self, delta_pitch: float, delta_yaw: float) -> None:
         """Orbit camera around orbit center (world origin) by `pitch` and `yaw`"""
-        # Problem: pitch rotation is about x-axis, but we want to rotate about axis that lies in xz-plane and is orthogonal to camera position vector
         self.position = (
             get_rotation_matrix(
                 self.yaw + delta_yaw,
@@ -145,6 +155,30 @@ class Camera:
 
         self.pitch += delta_pitch
         self.yaw += delta_yaw
+
+    def orbit_from_to(
+        self,
+        initial_position: Vector,
+        initial_pitch: float,
+        initial_yaw: float,
+        new_pitch: float,
+        new_yaw: float,
+    ) -> None:
+        """Orbit camera around orbit center (world origin), starting from a given initial configuration to some new pitch and yaw"""
+        new_pitch = self.clip_pitch(new_pitch)
+        self.position = (
+            get_rotation_matrix(
+                new_yaw,
+                0,
+            ).dot(
+                get_rotation_matrix(0, new_pitch).dot(
+                    get_rotation_matrix(-initial_yaw, -initial_pitch)
+                )
+            )
+        ).dot(initial_position)
+
+        self.pitch = new_pitch
+        self.yaw = new_yaw
 
     def reset_position(self) -> None:
         self.position = np.copy(self._initial_position)
@@ -346,13 +380,20 @@ class InputManager:
         """Stores information needed for moving a grabbed node"""
 
         # The position of the selected Node before the grab
-        start: Vector
+        start_position: Vector
         # Offset of mouse from position of grabbed node on screen
         mouse_offset: npt.NDArray[np.int64]
 
     @dataclass
     class PanInfo:
-        start: Vector
+        start_position: Vector
+        mouse_start: npt.NDArray[np.int64]
+
+    @dataclass
+    class OrbitInfo:
+        start_position: Vector
+        start_pitch: float
+        start_yaw: float
         mouse_start: npt.NDArray[np.int64]
 
     def __init__(self, nodes: List[Node], camera: Camera):
@@ -362,9 +403,11 @@ class InputManager:
 
         self.camera = camera
         self.pan_info: Optional[InputManager.PanInfo] = None
+        self.orbit_info: Optional[InputManager.OrbitInfo] = None
 
         self.camera_move_step = 0.2
         self.camera_rotate_step = np.pi / 20
+        self.rotation_factor: float = np.pi / 300
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
@@ -413,7 +456,9 @@ class InputManager:
                     self.selected_node = None
                 else:
                     assert self.selected_node is not None
-                    self.nodes[self.selected_node].position = self.grab_info.start
+                    self.nodes[self.selected_node].position = (
+                        self.grab_info.start_position
+                    )
 
                     self.grab_info = None
             elif event.key == pygame.K_g:
@@ -430,13 +475,21 @@ class InputManager:
                     return
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                     self.pan_info = InputManager.PanInfo(
-                        start=self.camera.position,
+                        start_position=np.copy(self.camera.position),
+                        mouse_start=np.array(pygame.mouse.get_pos()),
+                    )
+                else:
+                    self.orbit_info = InputManager.OrbitInfo(
+                        start_position=np.copy(self.camera.position),
+                        start_pitch=self.camera.pitch,
+                        start_yaw=self.camera.yaw,
                         mouse_start=np.array(pygame.mouse.get_pos()),
                     )
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 2:
                 self.pan_info = None
+                self.orbit_info = None
 
         elif event.type == pygame.MOUSEMOTION:
             self.handle_mouse_move(event.pos)
@@ -450,7 +503,7 @@ class InputManager:
         mouse_pos = np.array(pygame.mouse.get_pos())
         grabbed_node2d = self.camera.world_to_screen(grabbed_node.position)
         self.grab_info = InputManager.GrabInfo(
-            start=grabbed_node.position,
+            start_position=grabbed_node.position,
             mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
         )
 
@@ -480,6 +533,8 @@ class InputManager:
             self.handle_grab_mouse_move(self.grab_info, new_mouse_pos)
         if self.pan_info is not None:
             self.handle_pan_mouse_move(self.pan_info, new_mouse_pos)
+        if self.orbit_info is not None:
+            self.handle_orbit_mouse_move(self.orbit_info, new_mouse_pos)
 
     def handle_grab_mouse_move(
         self, grab_info: GrabInfo, new_mouse_pos: Tuple[int, int]
@@ -501,10 +556,10 @@ class InputManager:
                 [d2, -d1, 0, -d2 * o1 + d1 * o2],
                 [0, d3, -d2, -d3 * o2 + d2 * o3],
                 [
-                    *(grab_info.start - self.camera.position),
+                    *(grab_info.start_position - self.camera.position),
                     -np.dot(
-                        grab_info.start,
-                        grab_info.start - self.camera.position,
+                        grab_info.start_position,
+                        grab_info.start_position - self.camera.position,
                     ),
                 ],
             ]
@@ -520,11 +575,28 @@ class InputManager:
     ) -> None:
         mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
         offset2d = mouse_pos - pan_info.mouse_start
+        # TODO: this calculation should be a method of the Camera class
         offset3d = (
             np.concatenate([offset2d * [-1, 1], np.zeros(1)]) / self.camera.focal_length
         )
-        self.camera.position = pan_info.start + self.camera.from_camera_coords(
+        self.camera.position = pan_info.start_position + self.camera.from_camera_coords(
             offset3d.astype(np.float64)
+        )
+
+    def handle_orbit_mouse_move(
+        self, orbit_info: OrbitInfo, new_mouse_pos: Tuple[int, int]
+    ) -> None:
+        mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
+        offset2d = mouse_pos - orbit_info.mouse_start
+        new_pitch = orbit_info.start_pitch - offset2d[1] * self.rotation_factor
+        new_yaw = orbit_info.start_yaw + offset2d[0] * self.rotation_factor
+
+        self.camera.orbit_from_to(
+            orbit_info.start_position,
+            orbit_info.start_pitch,
+            orbit_info.start_yaw,
+            new_pitch,
+            new_yaw,
         )
 
 
