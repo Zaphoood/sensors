@@ -97,7 +97,10 @@ class Camera:
     def from_camera_coords(self, vector: Vector) -> Vector:
         """Rotate vector from the camera's coordinate system to the world coordinate system"""
 
-        return get_rotation_matrix(self.yaw, self.pitch).dot(vector)
+        R_xz = get_rotation_matrix_xz(self.yaw)
+        R_yz = get_rotation_matrix_yz(self.pitch)
+
+        return R_xz.dot(R_yz.dot(vector))
 
     def world_to_screen(self, point3d: Vector) -> Optional[Vector]:
         """Map 3D point to pixel coordinates on camera sensor. Return `None` if the point lies behind the camera."""
