@@ -622,7 +622,7 @@ class App:
             np.array([0.8, 0.8, -1.0]),
             yaw=-np.pi / 10,
             pitch=-np.pi / 8,
-            focal_length=200,
+            focal_length=300,
             sensor_dimensions=screen_size,
         )
         self.nodes = [
@@ -652,7 +652,7 @@ class App:
 
 def main():
     pygame.init()
-    screen_size = (800, 600)
+    screen_size = (1200, 900)
     screen = pygame.display.set_mode(screen_size)
     pygame.display.set_caption("Circumcircle 3d")
     app = App(screen_size)
