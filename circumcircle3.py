@@ -29,6 +29,8 @@ def to_homogeneous(v: Vector) -> Vector:
 
 
 def get_rotation_matrix(theta: float, rho: float):
+    """Return the matrix with rotates a vector by `theta` about the y-axis and `rho` about the x-axis"""
+
     sin = np.sin
     cos = np.cos
 
@@ -81,7 +83,7 @@ class Camera:
 
     @property
     def rotation_matrix(self) -> npt.NDArray[np.float64]:
-        """Return matrix which rotates world coordinate system vector in to camera coordinate system vector"""
+        """Return matrix which rotates world coordinate system vector to camera coordinate system vector"""
 
         return get_rotation_matrix(-self.yaw, -self.pitch)
 
@@ -113,15 +115,32 @@ class Camera:
         )
         return ray_world_coords / np.linalg.norm(ray_world_coords)
 
-    def move(self, offset: Vector) -> None:
+    def pan(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""
         self.position += get_rotation_matrix(self.yaw, self.pitch).dot(offset)
 
-    def change_pitch(self, offset: float) -> None:
-        self.pitch = np.clip(self.pitch + offset, -0.5 * np.pi, 0.5 * np.pi)
+    def change_pitch(self, delta_pitch: float) -> None:
+        self.pitch = np.clip(self.pitch + delta_pitch, -0.5 * np.pi, 0.5 * np.pi)
 
-    def change_yaw(self, offset: float) -> None:
-        self.yaw += offset
+    def change_yaw(self, delta_yaw: float) -> None:
+        self.yaw += delta_yaw
+
+    def orbit(self, delta_pitch: float, delta_yaw: float) -> None:
+        """Orbit camera around orbit center (world origin) by `pitch` and `yaw`"""
+        # Problem: pitch rotation is about x-axis, but we want to rotate about axis that lies in xz-plane and is orthogonal to camera position vector
+        self.position = (
+            get_rotation_matrix(
+                self.yaw + delta_yaw,
+                0,
+            ).dot(
+                get_rotation_matrix(0, delta_pitch).dot(
+                    get_rotation_matrix(-self.yaw, 0)
+                )
+            )
+        ).dot(self.position)
+
+        self.pitch += delta_pitch
+        self.yaw += delta_yaw
 
     def reset_position(self) -> None:
         self.position = np.copy(self._initial_position)
@@ -337,25 +356,37 @@ class InputManager:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                self.camera.change_yaw(self.camera_rotate_step)
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.camera.orbit(0, -self.camera_rotate_step)
+                else:
+                    self.camera.change_yaw(self.camera_rotate_step)
             elif event.key == pygame.K_LEFT:
-                self.camera.change_yaw(-self.camera_rotate_step)
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.camera.orbit(0, self.camera_rotate_step)
+                else:
+                    self.camera.change_yaw(-self.camera_rotate_step)
             if event.key == pygame.K_UP:
-                self.camera.change_pitch(self.camera_rotate_step)
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.camera.orbit(-self.camera_rotate_step, 0)
+                else:
+                    self.camera.change_pitch(self.camera_rotate_step)
             elif event.key == pygame.K_DOWN:
-                self.camera.change_pitch(-self.camera_rotate_step)
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.camera.orbit(self.camera_rotate_step, 0)
+                else:
+                    self.camera.change_pitch(-self.camera_rotate_step)
             elif event.key == pygame.K_w:
-                self.camera.move(np.array([0, 0, self.camera_rotate_step]))
+                self.camera.pan(np.array([0, 0, self.camera_rotate_step]))
             elif event.key == pygame.K_a:
-                self.camera.move(np.array([-self.camera_rotate_step, 0, 0]))
+                self.camera.pan(np.array([-self.camera_rotate_step, 0, 0]))
             elif event.key == pygame.K_s:
-                self.camera.move(np.array([0, 0, -self.camera_rotate_step]))
+                self.camera.pan(np.array([0, 0, -self.camera_rotate_step]))
             elif event.key == pygame.K_d:
-                self.camera.move(np.array([self.camera_rotate_step, 0, 0]))
+                self.camera.pan(np.array([self.camera_rotate_step, 0, 0]))
             elif event.key == pygame.K_y:
-                self.camera.move(np.array([0, self.camera_rotate_step, 0]))
+                self.camera.pan(np.array([0, self.camera_rotate_step, 0]))
             elif event.key == pygame.K_e:
-                self.camera.move(np.array([0, -self.camera_rotate_step, 0]))
+                self.camera.pan(np.array([0, -self.camera_rotate_step, 0]))
             elif event.key == pygame.K_r:
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                     self.camera.position = np.array([0.0, 0.0, -1.0])
