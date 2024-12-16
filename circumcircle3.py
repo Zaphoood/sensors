@@ -89,19 +89,22 @@ class Camera:
             ]
         )
 
-    @property
-    def rotation_matrix(self) -> npt.NDArray[np.float64]:
-        """Return matrix which rotates world coordinate system vector to camera coordinate system vector"""
+    def to_camera_coords(self, vector: Vector) -> npt.NDArray[np.float64]:
+        """Rotate vector from the world coordinate system to the camera's coordinate system"""
 
-        return get_rotation_matrix(-self.yaw, -self.pitch)
+        return get_rotation_matrix(-self.yaw, -self.pitch).dot(vector)
+
+    def from_camera_coords(self, vector: Vector) -> Vector:
+        """Rotate vector from the camera's coordinate system to the world coordinate system"""
+
+        return get_rotation_matrix(self.yaw, self.pitch).dot(vector)
 
     def world_to_screen(self, point3d: Vector) -> Optional[Vector]:
         """Map 3D point to pixel coordinates on camera sensor. Return `None` if the point lies behind the camera."""
         assert point3d.shape == (3,)
 
-        # From world to camera coordinate system
         point3d_offset = cast(Vector, point3d - self.position)
-        point3d_camera_coords = self.rotation_matrix.dot(point3d_offset)
+        point3d_camera_coords = self.to_camera_coords(point3d_offset)
         if point3d_camera_coords[2] <= 0:
             return None
 
@@ -126,10 +129,6 @@ class Camera:
     def pan(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""
         self.position += self.from_camera_coords(offset)
-
-    def from_camera_coords(self, vector: Vector) -> Vector:
-        """Convert vector expressed in the cameras coordinate system to the world coordinate system"""
-        return get_rotation_matrix(self.yaw, self.pitch).dot(vector)
 
     def change_pitch(self, delta_pitch: float) -> None:
         self.pitch = self.clip_pitch(self.pitch + delta_pitch)
