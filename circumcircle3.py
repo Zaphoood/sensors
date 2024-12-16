@@ -478,6 +478,8 @@ class InputManager:
                         start_yaw=self.camera.yaw,
                         mouse_start=np.array(pygame.mouse.get_pos()),
                     )
+            elif event.button in (4, 5):
+                self.handle_mouse_scroll(event)
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 2:
@@ -591,6 +593,11 @@ class InputManager:
             new_pitch,
             new_yaw,
         )
+
+    def handle_mouse_scroll(self, event: pygame.event.Event) -> None:
+        direction = 1 if event.button == 4 else -1
+        offset = self.camera_move_step * np.array([0, 0, direction])
+        self.camera.pan(cast(Vector, offset))
 
 
 def closest_point_on_ray(
