@@ -117,7 +117,11 @@ class Camera:
 
     def pan(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""
-        self.position += get_rotation_matrix(self.yaw, self.pitch).dot(offset)
+        self.position += self.from_camera_coords(offset)
+
+    def from_camera_coords(self, vector: Vector) -> Vector:
+        """Convert vector expressed in the cameras coordinate system to the world coordinate system"""
+        return get_rotation_matrix(self.yaw, self.pitch).dot(vector)
 
     def change_pitch(self, delta_pitch: float) -> None:
         self.pitch = np.clip(self.pitch + delta_pitch, -0.5 * np.pi, 0.5 * np.pi)
@@ -339,16 +343,25 @@ class Circumcircle:
 class InputManager:
     @dataclass
     class GrabInfo:
+        """Stores information needed for moving a grabbed node"""
+
         # The position of the selected Node before the grab
         start: Vector
         # Offset of mouse from position of grabbed node on screen
         mouse_offset: npt.NDArray[np.int64]
 
+    @dataclass
+    class PanInfo:
+        start: Vector
+        mouse_start: npt.NDArray[np.int64]
+
     def __init__(self, nodes: List[Node], camera: Camera):
         self.nodes = nodes
         self.selected_node: Optional[int] = None
         self.grab_info: Optional[InputManager.GrabInfo] = None
+
         self.camera = camera
+        self.pan_info: Optional[InputManager.PanInfo] = None
 
         self.camera_move_step = 0.2
         self.camera_rotate_step = np.pi / 20
@@ -407,12 +420,24 @@ class InputManager:
                 self.start_stop_grab()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button != 1:
-                return
-            if self.grab_info is not None:
-                self.grab_info = None
-            else:
-                self.handle_mouse_select(event)
+            if event.button == 1:
+                if self.grab_info is not None:
+                    self.grab_info = None
+                else:
+                    self.handle_mouse_select(event)
+            elif event.button == 2:
+                if self.grab_info is not None:
+                    return
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.pan_info = InputManager.PanInfo(
+                        start=self.camera.position,
+                        mouse_start=np.array(pygame.mouse.get_pos()),
+                    )
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 2:
+                self.pan_info = None
+
         elif event.type == pygame.MOUSEMOTION:
             self.handle_mouse_move(event.pos)
 
@@ -451,13 +476,18 @@ class InputManager:
             self.nodes[self.selected_node].on_select()
 
     def handle_mouse_move(self, new_mouse_pos: Tuple[int, int]) -> None:
-        if self.grab_info is None:
-            return
+        if self.grab_info is not None:
+            self.handle_grab_mouse_move(self.grab_info, new_mouse_pos)
+        if self.pan_info is not None:
+            self.handle_pan_mouse_move(self.pan_info, new_mouse_pos)
 
+    def handle_grab_mouse_move(
+        self, grab_info: GrabInfo, new_mouse_pos: Tuple[int, int]
+    ) -> None:
         assert self.selected_node is not None
 
         mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
-        new_pos2d = mouse_pos - self.grab_info.mouse_offset
+        new_pos2d = mouse_pos - grab_info.mouse_offset
         new_ray = self.camera.screen_to_world(new_pos2d.astype(np.float64))
 
         # Solve for the intersection of the ray through the new 2d
@@ -471,19 +501,31 @@ class InputManager:
                 [d2, -d1, 0, -d2 * o1 + d1 * o2],
                 [0, d3, -d2, -d3 * o2 + d2 * o3],
                 [
-                    *(self.grab_info.start - self.camera.position),
+                    *(grab_info.start - self.camera.position),
                     -np.dot(
-                        self.grab_info.start,
-                        self.grab_info.start - self.camera.position,
+                        grab_info.start,
+                        grab_info.start - self.camera.position,
                     ),
                 ],
             ]
         )
-        # Solve by eigenvector corresponding to smalles eigenvalue
+        # Solve by eigenvector corresponding to smallest eigenvalue
         _, _, V = np.linalg.svd(A)
         new_pos3d = cast(Vector, V[-1, :-1] / V[-1, -1])
 
         self.nodes[self.selected_node].position = new_pos3d
+
+    def handle_pan_mouse_move(
+        self, pan_info: PanInfo, new_mouse_pos: Tuple[int, int]
+    ) -> None:
+        mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
+        offset2d = mouse_pos - pan_info.mouse_start
+        offset3d = (
+            np.concatenate([offset2d * [-1, 1], np.zeros(1)]) / self.camera.focal_length
+        )
+        self.camera.position = pan_info.start + self.camera.from_camera_coords(
+            offset3d.astype(np.float64)
+        )
 
 
 def closest_point_on_ray(
