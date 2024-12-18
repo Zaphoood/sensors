@@ -93,14 +93,9 @@ class InputManager:
                 if self.grab_info is None:
                     self.selected_node = None
                 else:
-                    assert self.selected_node is not None
-                    self.nodes[self.selected_node].position = (
-                        self.grab_info.start_position
-                    )
-
-                    self.grab_info = None
+                    self.cancel_grab(self.grab_info)
             elif event.key == pygame.K_g:
-                self.start_stop_grab()
+                self.start_grab()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -134,7 +129,7 @@ class InputManager:
         elif event.type == pygame.MOUSEMOTION:
             self.handle_mouse_move(event.pos)
 
-    def start_stop_grab(self) -> None:
+    def start_grab(self) -> None:
         if self.selected_node is None:
             return
 
@@ -146,6 +141,12 @@ class InputManager:
             start_position=grabbed_node.position,
             mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
         )
+
+    def cancel_grab(self, grab_info: GrabInfo) -> None:
+        assert self.selected_node is not None
+        self.nodes[self.selected_node].position = grab_info.start_position
+
+        self.grab_info = None
 
     def handle_mouse_select(self, event: pygame.event.Event) -> None:
         ray = self.camera.screen_to_world(event.pos)
