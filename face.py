@@ -3,7 +3,8 @@ from typing import Optional, Sequence, Tuple, cast
 import numpy as np
 import pygame
 
-from camera import Camera, Sun
+from camera import Camera
+from illumination import Illumination
 from draw import draw_line3d
 from node import Node
 from util import BLACK, GREEN, WHITE, Color, Vector
@@ -34,13 +35,13 @@ class Face:
         self,
         screen: pygame.surface.Surface,
         camera: Camera,
-        sun: Sun,
+        illumination: Illumination,
         normal_length: Optional[float] = None,
     ) -> None:
         normal_to_camera = self.get_normal_to_camera(camera)
-        illumination = sun.get_surface_illumination(normal_to_camera)
+        illumination_level = illumination.get_surface_illumination(normal_to_camera)
         color = list(
-            np.round(np.clip(illumination * np.array(WHITE), 0, 255)).astype(int)
+            np.round(np.clip(illumination_level * np.array(WHITE), 0, 255)).astype(int)
         )
 
         nodes_3d = np.array([node.position for node in self.nodes])

@@ -3,7 +3,8 @@ from typing import List, Optional, Tuple, cast
 import numpy as np
 import pygame
 
-from camera import Camera, Sun
+from camera import Camera
+from illumination import Illumination, Sun
 from draw import draw_circle3d, draw_line3d
 from input import InputManager
 from node import Node
@@ -103,7 +104,7 @@ class App:
             focal_length=300,
             sensor_dimensions=screen_size,
         )
-        self.sun = Sun(np.array([1, -1, 1]), 1)
+        self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.2)
         self.nodes = [
             Node(np.array([0, 0, 0])),
             Node(np.array([0, 1, 1])),
@@ -128,7 +129,7 @@ class App:
         screen.fill(WHITE)
         self.coordinate_axes.draw(screen, self.camera)
         # self.circle.draw(screen, self.camera)
-        self.face.draw(screen, self.camera, self.sun)
+        self.face.draw(screen, self.camera, self.illumination)
         for node in self.nodes:
             node.draw(screen, self.camera)
 
