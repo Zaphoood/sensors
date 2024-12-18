@@ -68,16 +68,19 @@ class Camera:
 
         return normalize_homogeneous(point2d_homo)
 
-    def screen_to_world(self, point2d: Union[Tuple[int, int], Vector]) -> Vector:
-        """Map a 2D point on the camera sensor to a unit vector defining the view ray"""
+    def get_view_ray(self, point2d: Union[Tuple[int, int], Vector]) -> Vector:
+        """Map a 2D point on the camera sensor to a unit vector pointing in that view direction, expressed in camera coordinates"""
         if isinstance(point2d, np.ndarray):
             assert point2d.shape == (2,)
 
         ray_camera_coords = np.array(
             [point2d[0] - self.t_x, -(point2d[1] - self.t_y), self.focal_length]
         )
-        ray_world_coords = self.from_camera_coords(ray_camera_coords)
-        return cast(Vector, ray_world_coords / np.linalg.norm(ray_world_coords))
+        return cast(Vector, ray_camera_coords / np.linalg.norm(ray_camera_coords))
+
+    def get_view_ray_world(self, point2d: Union[Tuple[int, int], Vector]) -> Vector:
+        """Map a 2D point on the camera sensor to a unit vector pointing in that view direction, expressed in world coordinates"""
+        return self.from_camera_coords(self.get_view_ray(point2d))
 
     def pan(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""

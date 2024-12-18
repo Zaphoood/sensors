@@ -17,10 +17,14 @@ class InputManager:
     class GrabInfo:
         """Stores information needed for moving a grabbed node"""
 
-        # The position of the selected Node before the grab
-        start_position: Vector
-        # Offset of mouse from position of grabbed node on screen
-        mouse_offset: npt.NDArray[np.int64]
+        # Distance from the camera to the plane in which the grabbed Node can move
+        plane_depth: float
+
+        # Position of the grabbed Node before the grab
+        position_before: Vector
+
+        # Offset of the grabbed vector from the projection of the initial view ray onto the movement plane
+        offset: Vector
 
     @dataclass
     class PanInfo:
@@ -134,22 +138,29 @@ class InputManager:
             return
 
         grabbed_node = self.nodes[self.selected_node]
+        plane_depth = self.camera.to_camera_coords(
+            cast(Vector, grabbed_node.position - self.camera.position)
+        )[2]
 
         mouse_pos = np.array(pygame.mouse.get_pos())
-        grabbed_node2d = self.camera.world_to_screen(grabbed_node.position)
+        view_ray = self.camera.get_view_ray(mouse_pos)
+        view_ray_in_plane = self.camera.position + self.camera.from_camera_coords(
+            view_ray * plane_depth / view_ray[2]
+        )
+        offset = view_ray_in_plane - grabbed_node.position
+
         self.grab_info = InputManager.GrabInfo(
-            start_position=grabbed_node.position,
-            mouse_offset=np.round(mouse_pos - grabbed_node2d).astype(int),
+            plane_depth, grabbed_node.position, cast(Vector, offset)
         )
 
     def cancel_grab(self, grab_info: GrabInfo) -> None:
         assert self.selected_node is not None
-        self.nodes[self.selected_node].position = grab_info.start_position
+        self.nodes[self.selected_node].position = grab_info.position_before
 
         self.grab_info = None
 
     def handle_mouse_select(self, event: pygame.event.Event) -> None:
-        ray = self.camera.screen_to_world(event.pos)
+        ray = self.camera.get_view_ray_world(event.pos)
         close_candidates = []
         for i, node in enumerate(self.nodes):
             closest_coords, _ = closest_point_on_ray(
@@ -182,34 +193,13 @@ class InputManager:
     ) -> None:
         assert self.selected_node is not None
 
-        mouse_pos = np.array(new_mouse_pos, dtype=np.int64)
-        new_pos2d = mouse_pos - grab_info.mouse_offset
-        new_ray = self.camera.screen_to_world(new_pos2d.astype(np.float64))
-
-        # Solve for the intersection of the ray through the new 2d
-        # position and the plane orthogonal to the vector from the
-        # camera origin to the position before the grab. To do this, we
-        # set up a homogeneous system of equations.
-        d1, d2, d3 = new_ray
-        o1, o2, o3 = self.camera.position
-        A = np.array(
-            [
-                [d2, -d1, 0, -d2 * o1 + d1 * o2],
-                [0, d3, -d2, -d3 * o2 + d2 * o3],
-                [
-                    *(grab_info.start_position - self.camera.position),
-                    -np.dot(
-                        grab_info.start_position,
-                        grab_info.start_position - self.camera.position,
-                    ),
-                ],
-            ]
+        new_view_ray = self.camera.get_view_ray(new_mouse_pos)
+        new_view_ray_in_plane = self.camera.position + self.camera.from_camera_coords(
+            new_view_ray * grab_info.plane_depth / new_view_ray[2]
         )
-        # Solve by eigenvector corresponding to smallest eigenvalue
-        _, _, V = np.linalg.svd(A)
-        new_pos3d = cast(Vector, V[-1, :-1] / V[-1, -1])
-
-        self.nodes[self.selected_node].position = new_pos3d
+        self.nodes[self.selected_node].position = cast(
+            Vector, new_view_ray_in_plane - grab_info.offset
+        )
 
     def handle_pan_mouse_move(
         self, pan_info: PanInfo, new_mouse_pos: Tuple[int, int]
