@@ -3,11 +3,12 @@ from typing import List, Optional, Tuple, cast
 import numpy as np
 import pygame
 
-from camera import Camera
+from camera import Camera, Sun
 from draw import draw_circle3d, draw_line3d
 from input import InputManager
 from node import Node
-from util import BLACK, RED, WHITE, Color, Vector
+from face import Face
+from util import BLACK, WHITE, Color, Vector
 
 
 class CoordinateAxes:
@@ -102,13 +103,15 @@ class App:
             focal_length=300,
             sensor_dimensions=screen_size,
         )
+        self.sun = Sun(np.array([1, -1, 1]), 1)
         self.nodes = [
             Node(np.array([0, 0, 0])),
             Node(np.array([0, 1, 1])),
             Node(np.array([1, 0, 0])),
         ]
+        self.face = Face((self.nodes[0], self.nodes[1], self.nodes[2]))
 
-        self.circle = Circumcircle(self.nodes, RED)
+        # self.circle = Circumcircle(self.nodes, RED)
         self.coordinate_axes = CoordinateAxes(BLACK)
 
         self.input_manager = InputManager(self.nodes, self.camera)
@@ -124,7 +127,10 @@ class App:
     def draw(self, screen: pygame.Surface) -> None:
         screen.fill(WHITE)
         self.coordinate_axes.draw(screen, self.camera)
-        self.circle.draw(screen, self.camera)
+        # self.circle.draw(screen, self.camera)
+        self.face.draw(screen, self.camera, self.sun)
+        for node in self.nodes:
+            node.draw(screen, self.camera)
 
 
 def main():

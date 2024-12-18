@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union, cast
+from typing import List, Sequence, Tuple, Union, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -11,7 +11,19 @@ Color = Union[Tuple[int, int, int], List[int]]
 WHITE = [255, 255, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
+GREEN = [0, 255, 0]
 BLUE = [0, 0, 255]
+
+T = TypeVar("T")
+
+
+def shift(a: Sequence[T], n: int = 1) -> Sequence[T]:
+    if len(a) == 0:
+        return a
+
+    m = n % len(a)
+
+    return [*a[m:], *a[:m]]
 
 
 def get_rotation_matrix_xz(theta: float) -> npt.NDArray[np.float64]:

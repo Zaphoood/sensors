@@ -135,3 +135,12 @@ class Camera:
     def reset_orientation(self) -> None:
         self.yaw = self._initial_yaw
         self.pitch = self._initial_pitch
+
+
+class Sun:
+    def __init__(self, direction: Vector, brightness: float) -> None:
+        self.direction = direction / np.linalg.norm(direction)
+        self.brightness = brightness
+
+    def get_surface_illumination(self, surface_normal: Vector) -> float:
+        return -self.direction.dot(surface_normal)

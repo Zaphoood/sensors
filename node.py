@@ -15,7 +15,7 @@ class Node:
         position: Vector,
         color: Sequence[int] = BLACK,
     ) -> None:
-        self.position = position
+        self.position = position.astype(np.float64)
         self.color = color
         self.selected = False
 
