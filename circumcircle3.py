@@ -4,12 +4,12 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from illumination import Illumination, Sun
 from draw import draw_circle3d, draw_line3d
+from face import Face
+from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
-from face import Face
-from util import BLACK, WHITE, Color, Vector
+from util import BLACK, WHITE, Color, Vector, shift
 
 
 class CoordinateAxes:
@@ -105,12 +105,21 @@ class App:
             sensor_dimensions=screen_size,
         )
         self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.2)
-        self.nodes = [
-            Node(np.array([0, 0, 0])),
-            Node(np.array([0, 1, 1])),
+
+        north_pole = Node(np.array([0, 1, 0]))
+        south_pole = Node(np.array([0, -1, 0]))
+        equator = [
             Node(np.array([1, 0, 0])),
+            Node(np.array([0, 0, 1])),
+            Node(np.array([-1, 0, 0])),
+            Node(np.array([0, 0, -1])),
         ]
-        self.face = Face((self.nodes[0], self.nodes[1], self.nodes[2]))
+        self.nodes = [north_pole, south_pole, *equator]
+
+        self.faces = []
+        for node1, node2 in zip(equator, shift(equator)):
+            self.faces.append(Face((node1, node2, north_pole)))
+            self.faces.append(Face((node1, node2, south_pole)))
 
         # self.circle = Circumcircle(self.nodes, RED)
         self.coordinate_axes = CoordinateAxes(BLACK)
@@ -129,7 +138,8 @@ class App:
         screen.fill(WHITE)
         self.coordinate_axes.draw(screen, self.camera)
         # self.circle.draw(screen, self.camera)
-        self.face.draw(screen, self.camera, self.illumination)
+        for face in self.faces:
+            face.draw(screen, self.camera, self.illumination)
         for node in self.nodes:
             node.draw(screen, self.camera)
 
