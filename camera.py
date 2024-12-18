@@ -76,10 +76,8 @@ class Camera:
         ray_camera_coords = np.array(
             [point2d[0] - self.t_x, -(point2d[1] - self.t_y), self.focal_length]
         )
-        ray_world_coords = get_rotation_matrix(self.yaw, self.pitch).dot(
-            ray_camera_coords
-        )
-        return ray_world_coords / np.linalg.norm(ray_world_coords)
+        ray_world_coords = self.from_camera_coords(ray_camera_coords)
+        return cast(Vector, ray_world_coords / np.linalg.norm(ray_world_coords))
 
     def pan(self, offset: Vector) -> None:
         """Move camera by offset according to view coordinate system"""
