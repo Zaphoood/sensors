@@ -4,11 +4,11 @@ import numpy as np
 import numpy.typing as npt
 
 from util import (
+    Vector,
     get_rotation_matrix,
     get_rotation_matrix_xz,
     get_rotation_matrix_yz,
     normalize_homogeneous,
-    Vector,
 )
 
 
@@ -54,8 +54,8 @@ class Camera:
 
         return R_xz.dot(R_yz.dot(vector))
 
-    def world_to_screen(self, point3d: Vector) -> Optional[Vector]:
-        """Map 3D point to pixel coordinates on camera sensor. Return `None` if the point lies behind the camera."""
+    def world_to_screen(self, point3d: Vector) -> Optional[Tuple[Vector, float]]:
+        """Map 3D point to pixel coordinates on camera sensor and z-depth. Return `None` if the point lies behind the camera."""
         assert point3d.shape == (3,)
 
         point3d_offset = cast(Vector, point3d - self.position)
@@ -66,7 +66,7 @@ class Camera:
         # Camera coordinate to pixel on 'image sensor'
         point2d_homo = self.calibration_matrix.dot(point3d_camera_coords)
 
-        return normalize_homogeneous(point2d_homo)
+        return normalize_homogeneous(point2d_homo), point3d_camera_coords[2]
 
     def get_view_ray(self, point2d: Union[Tuple[int, int], Vector]) -> Vector:
         """Map a 2D point on the camera sensor to a unit vector pointing in that view direction, expressed in camera coordinates"""

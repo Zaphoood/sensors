@@ -5,12 +5,13 @@ import pygame
 
 from camera import Camera
 from illumination import Illumination
-from draw import draw_line3d
+from draw import draw_line3d, draw_line3d_z, draw_triangle3d_z
 from node import Node
+from renderer import Drawable, distance_to_z_buffer
 from util import BLACK, GREEN, WHITE, Color, Vector
 
 
-class Face:
+class Face(Drawable):
     def __init__(
         self,
         nodes: Tuple[
@@ -19,9 +20,11 @@ class Face:
             Node,
         ],
         edge_color: Color = BLACK,
+        draw_normals: bool = False,
     ) -> None:
         self.nodes = nodes
         self.edge_color = edge_color
+        self.draw_normals = draw_normals
 
     def get_normal_to_camera(self, camera: Camera) -> Vector:
         normal = np.cross(
@@ -33,10 +36,10 @@ class Face:
 
     def draw(
         self,
-        screen: pygame.surface.Surface,
+        buffer: pygame.surface.Surface,
+        z_buffer: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
-        normal_length: Optional[float] = None,
     ) -> None:
         normal_to_camera = self.get_normal_to_camera(camera)
         illumination_level = illumination.get_surface_illumination(normal_to_camera)
@@ -45,17 +48,12 @@ class Face:
         )
 
         nodes_3d = np.array([node.position for node in self.nodes])
-        nodes_2d = [camera.world_to_screen(node) for node in nodes_3d]
-        if any(node_2d is None for node_2d in nodes_2d):
-            return
-        nodes_2d = cast(Sequence[Vector], nodes_2d)
-        nodes_2d = [tuple(np.round(node_2d).astype(int)) for node_2d in nodes_2d]
+        draw_triangle3d_z(
+            buffer, z_buffer, camera, color, self.edge_color, nodes_3d, edge_width=1
+        )
 
-        pygame.draw.polygon(screen, color, nodes_2d, 0)
-        pygame.draw.polygon(screen, self.edge_color, nodes_2d, 1)
-
-        if normal_length is not None:
+        if self.draw_normals:
             center = np.mean(nodes_3d, axis=0)
-            draw_line3d(
-                screen, camera, GREEN, center, center + normal_length * normal_to_camera
+            draw_line3d_z(
+                buffer, z_buffer, camera, GREEN, center, center + normal_to_camera
             )

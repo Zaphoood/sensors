@@ -1,15 +1,17 @@
-from typing import List, Optional, Sequence, cast
+from typing import Sequence
 
 import numpy as np
 import pygame
 
+from illumination import Illumination
+from renderer import Drawable, distance_to_z_buffer
 from util import Vector, BLACK
 from camera import Camera
 
 NODE_SIZE_PX = 16
 
 
-class Node:
+class Node(Drawable):
     def __init__(
         self,
         position: Vector,
@@ -37,10 +39,17 @@ class Node:
     def on_deselect(self) -> None:
         self.selected = False
 
-    def draw(self, screen: pygame.Surface, camera: Camera) -> None:
-        center = camera.world_to_screen(self.position)
-        if center is None:
+    def draw(
+        self,
+        buffer: pygame.Surface,
+        z_buffer: pygame.surface.Surface,
+        camera: Camera,
+        illumination: Illumination,
+    ) -> None:
+        screen_pos = camera.world_to_screen(self.position)
+        if screen_pos is None:
             return
+        center, z = screen_pos
 
         rect = [
             np.round(center[0] - NODE_SIZE_PX / 2),
@@ -48,4 +57,5 @@ class Node:
             NODE_SIZE_PX,
             NODE_SIZE_PX,
         ]
-        pygame.draw.rect(screen, self.color, rect, 0 if self.selected else 1)
+        pygame.draw.rect(buffer, self.color, rect, 0 if self.selected else 1)
+        pygame.draw.rect(z_buffer, distance_to_z_buffer(z), rect, 0)

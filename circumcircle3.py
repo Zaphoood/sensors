@@ -4,12 +4,13 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from draw import draw_circle3d, draw_line3d
+from renderer import Renderer
+from draw import draw_line3d
 from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
-from util import BLACK, WHITE, Color, Vector, shift
+from util import PINK, WHITE, Color, Vector, shift
 
 
 class CoordinateAxes:
@@ -27,8 +28,9 @@ class CoordinateAxes:
 
             draw_line3d(screen, camera, self.color, origin, endpoint3d)
 
-            endpoint2d = camera.world_to_screen(cast(Vector, endpoint3d * 1.1))
-            if endpoint2d is not None:
+            screen_pos = camera.world_to_screen(cast(Vector, endpoint3d * 1.1))
+            if screen_pos is not None:
+                endpoint2d, _ = screen_pos
                 text_position = tuple(
                     np.round(endpoint2d + self.text_offset).astype(int)
                 )
@@ -41,17 +43,18 @@ class Circumcircle:
         self.color = color
 
     def draw(self, screen: pygame.Surface, camera: Camera) -> None:
-        for node in self.nodes:
-            node.draw(screen, camera)
+        # TODO: add to renderer
+        # for node in self.nodes:
+        #     node.draw(screen, camera)
 
         params = self.get_circle_params()
-        if params is not None:
-            center, normal, radius = params
-            center_node = Node(center, color=self.color)
-            center_node.draw(screen, camera)
-            draw_circle3d(
-                screen, camera, self.color, center, normal, radius, n_points=20
-            )
+        # if params is not None:
+        #     center, normal, radius = params
+        #     center_node = Node(center, color=self.color)
+        #     center_node.draw(screen, camera)
+        #     draw_circle3d(
+        #         screen, camera, self.color, center, normal, radius, n_points=20
+        #     )
 
     def get_circle_params(self) -> Optional[Tuple[Vector, Vector, float]]:
         """Return `center, normal, radius` of circle through the three nodes, if the
@@ -105,6 +108,7 @@ class App:
             sensor_dimensions=screen_size,
         )
         self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.2)
+        self.renderer = Renderer(self.camera, self.illumination, background_color=PINK)
 
         north_pole = Node(np.array([0, 1, 0]))
         south_pole = Node(np.array([0, -1, 0]))
@@ -116,13 +120,15 @@ class App:
         ]
         self.nodes = [north_pole, south_pole, *equator]
 
-        self.faces = []
+        self.faces: List[Face] = []
         for node1, node2 in zip(equator, shift(equator)):
             self.faces.append(Face((node1, node2, north_pole)))
             self.faces.append(Face((node1, node2, south_pole)))
 
-        # self.circle = Circumcircle(self.nodes, RED)
-        self.coordinate_axes = CoordinateAxes(BLACK)
+        for node in self.nodes:
+            self.renderer.register_drawable(node)
+        for face in self.faces:
+            self.renderer.register_drawable(face)
 
         self.input_manager = InputManager(self.nodes, self.camera)
 
@@ -135,13 +141,7 @@ class App:
         return True
 
     def draw(self, screen: pygame.Surface) -> None:
-        screen.fill(WHITE)
-        self.coordinate_axes.draw(screen, self.camera)
-        # self.circle.draw(screen, self.camera)
-        for face in self.faces:
-            face.draw(screen, self.camera, self.illumination)
-        for node in self.nodes:
-            node.draw(screen, self.camera)
+        self.renderer.render(screen)
 
 
 def main():
