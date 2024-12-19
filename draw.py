@@ -93,6 +93,33 @@ def draw_circle3d(
     n_points: int,
     width: int = 1,
 ) -> None:
+    starts, ends = get_3d_circle_points(center, normal, radius, n_points)
+    for start, end in zip(starts, ends):
+        draw_line3d(screen, camera, color, start, end, width)
+
+
+def draw_circle3d_z(
+    buffer: pygame.Surface,
+    z_buffer: pygame.Surface,
+    camera: Camera,
+    color: Color,
+    center: Vector,
+    normal: Vector,
+    radius: float,
+    n_points: int,
+    width: int = 1,
+) -> None:
+    starts, ends = get_3d_circle_points(center, normal, radius, n_points)
+    for start, end in zip(starts, ends):
+        draw_line3d_z(buffer, z_buffer, camera, color, start, end, width)
+
+
+def get_3d_circle_points(
+    center: Vector,
+    normal: Vector,
+    radius: float,
+    n_points: int,
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n1, n2, n3 = normal
     # Construct two vectors orthogonal to the normal and to each other, to use as basis for circle points
     if np.isclose(n1, 0):
@@ -114,5 +141,4 @@ def draw_circle3d(
     ends = center + radius * (
         np.cos(angles[1:, np.newaxis]) * orth1 + np.sin(angles[1:, np.newaxis]) * orth2
     )
-    for start, end in zip(starts, ends):
-        draw_line3d(screen, camera, color, start, end, width)
+    return starts, ends

@@ -4,13 +4,13 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from renderer import Renderer
-from draw import draw_line3d
+from renderer import Drawable, Renderer
+from draw import draw_circle3d_z, draw_line3d
 from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
-from util import PINK, WHITE, Color, Vector, shift
+from util import PINK, RED, Color, Vector, shift
 
 
 class CoordinateAxes:
@@ -37,24 +37,36 @@ class CoordinateAxes:
                 screen.blit(self.font.render(label, True, self.color), text_position)
 
 
-class Circumcircle:
+class Circumcircle(Drawable):
     def __init__(self, nodes: List[Node], color: Color) -> None:
         self.nodes = nodes
         self.color = color
 
-    def draw(self, screen: pygame.Surface, camera: Camera) -> None:
-        # TODO: add to renderer
-        # for node in self.nodes:
-        #     node.draw(screen, camera)
+    def draw(
+        self,
+        buffer: pygame.surface.Surface,
+        z_buffer: pygame.surface.Surface,
+        camera: Camera,
+        illumination: Illumination,
+    ) -> None:
 
         params = self.get_circle_params()
-        # if params is not None:
-        #     center, normal, radius = params
-        #     center_node = Node(center, color=self.color)
-        #     center_node.draw(screen, camera)
-        #     draw_circle3d(
-        #         screen, camera, self.color, center, normal, radius, n_points=20
-        #     )
+        if params is not None:
+            center, normal, radius = params
+            # TODO: Would be more efficient not to create a new Node every on every draw
+            center_node = Node(center, color=self.color)
+            center_node.draw(buffer, z_buffer, camera, illumination)
+
+            draw_circle3d_z(
+                buffer,
+                z_buffer,
+                camera,
+                self.color,
+                center,
+                normal,
+                radius,
+                n_points=20,
+            )
 
     def get_circle_params(self) -> Optional[Tuple[Vector, Vector, float]]:
         """Return `center, normal, radius` of circle through the three nodes, if the
@@ -129,6 +141,9 @@ class App:
             self.renderer.register_drawable(node)
         for face in self.faces:
             self.renderer.register_drawable(face)
+
+        self.circumcircle = Circumcircle([north_pole, equator[0], equator[1]], RED)
+        self.renderer.register_drawable(self.circumcircle)
 
         self.input_manager = InputManager(self.nodes, self.camera)
 

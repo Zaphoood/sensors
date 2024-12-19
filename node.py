@@ -57,5 +57,6 @@ class Node(Drawable):
             NODE_SIZE_PX,
             NODE_SIZE_PX,
         ]
-        pygame.draw.rect(buffer, self.color, rect, 0 if self.selected else 1)
-        pygame.draw.rect(z_buffer, distance_to_z_buffer(z), rect, 0)
+        width = 0 if self.selected else 1
+        pygame.draw.rect(buffer, self.color, rect, width)
+        pygame.draw.rect(z_buffer, distance_to_z_buffer(z), rect, width)
