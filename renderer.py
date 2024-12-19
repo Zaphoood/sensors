@@ -7,7 +7,7 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from util import BoundingBox, Color
+from util import RED, BoundingBox, Color
 from illumination import Illumination
 
 
@@ -39,7 +39,6 @@ class Renderer:
         current_z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
 
         z_infinity = distance_to_z_value(float("inf"))
-        print("-" * 20)
         for drawable in self.drawables:
             current_buffer.fill(0)
             current_z_buffer.fill(z_value_to_z_buffer(z_infinity))
@@ -52,7 +51,6 @@ class Renderer:
             z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
             current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
 
-            t_start = time.time()
             if bounding_boxes is None:
                 visible = current_z_buffer_arr > z_buffer_arr
                 z_buffer_arr[visible] = current_z_buffer_arr[visible]
@@ -70,8 +68,6 @@ class Renderer:
                     screen_arr[start_x:end_x, start_y:end_y][visible] = (
                         current_buffer_arr[start_x:end_x, start_y:end_y][visible]
                     )
-            t_end = time.time()
-            print(f"{drawable.__class__.__name__}: {(t_end - t_start)*1000:.1f} ms")
 
         z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
         screen_arr = pygame.surfarray.pixels3d(screen)
