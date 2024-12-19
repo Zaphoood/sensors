@@ -157,7 +157,7 @@ class App:
         return True
 
     def draw(self, screen: pygame.Surface) -> None:
-        self.renderer.render(screen)
+        self.renderer.render(screen, show_fps=True)
 
 
 def main():

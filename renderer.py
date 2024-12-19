@@ -7,8 +7,10 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from util import RED, BoundingBox, Color
+from util import BLACK, BoundingBox, Color
 from illumination import Illumination
+
+FONT_SIZE = 20
 
 
 class Renderer:
@@ -24,6 +26,11 @@ class Renderer:
 
         self.drawables: List[Drawable] = []
 
+        self.frames_this_second = 0
+        self.frames_last_second = 0
+        self.current_second = 0
+        self.font = pygame.font.SysFont("Courier", FONT_SIZE)
+
     def register_drawable(self, drawable: "Drawable") -> None:
         if drawable not in self.drawables:
             self.drawables.append(drawable)
@@ -33,7 +40,14 @@ class Renderer:
         with suppress(ValueError):
             self.drawables.remove(drawable)
 
-    def render(self, screen: pygame.surface.Surface) -> None:
+    def render(self, screen: pygame.surface.Surface, show_fps: bool = False) -> None:
+        second = int(time.time())
+        if second != self.current_second:
+            self.frames_last_second = self.frames_this_second
+            self.frames_this_second = 0
+            self.current_second = second
+        self.frames_this_second += 1
+
         current_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
         z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
         current_z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
@@ -72,6 +86,17 @@ class Renderer:
         z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
         screen_arr = pygame.surfarray.pixels3d(screen)
         screen_arr[z_buffer_arr == z_infinity] = self.background_color
+        # Need to delete this in order to unlock screen Surface
+        del screen_arr
+
+        if show_fps:
+            self.draw_fps(screen)
+
+    def draw_fps(self, screen: pygame.surface.Surface) -> None:
+        screen.blit(
+            self.font.render(f"fps: {self.frames_last_second}", True, BLACK),
+            (10, 10),
+        )
 
 
 def distance_to_z_value(distance: float) -> int:
