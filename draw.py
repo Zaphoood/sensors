@@ -1,10 +1,10 @@
-from typing import Optional, Sequence, Tuple, Union, cast
+from typing import List, Optional, Sequence, Tuple, Union, cast
 import numpy as np
 import numpy.typing as npt
 import pygame
 
 from renderer import distance_to_z_buffer
-from util import Vector, Color
+from util import BoundingBox, Vector, Color, get_bounding_box_2d
 from camera import Camera
 
 
@@ -15,13 +15,16 @@ def draw_line3d(
     start: Vector,
     end: Vector,
     width: int = 1,
-) -> None:
+) -> List[BoundingBox]:
     start_pos = camera.world_to_screen(start)
     end_pos = camera.world_to_screen(end)
     if start_pos is not None and end_pos is not None:
         start2d, _ = start_pos
         end2d, _ = end_pos
         pygame.draw.line(screen, color, tuple(start2d), tuple(end2d), width)
+        return [get_bounding_box_2d(np.array([start_pos, end_pos]))]
+
+    return []
 
 
 def draw_line3d_z(
@@ -32,7 +35,7 @@ def draw_line3d_z(
     start: Vector,
     end: Vector,
     width: int = 1,
-) -> None:
+) -> BoundingBox:
     start_pos = camera.world_to_screen(start)
     end_pos = camera.world_to_screen(end)
     mid_pos = camera.world_to_screen(cast(Vector, (start + end) / 2))
@@ -45,6 +48,10 @@ def draw_line3d_z(
             z_buffer, distance_to_z_buffer(z), tuple(start2d), tuple(end2d), width
         )
 
+        return get_bounding_box_2d(np.array([start2d, end2d]))
+
+    return (0, 0, 0, 0)
+
 
 def draw_triangle3d_z(
     buffer: pygame.Surface,
@@ -54,7 +61,7 @@ def draw_triangle3d_z(
     edge_color: Optional[Color],
     points: Union[npt.NDArray[np.float64], Sequence[Vector]],
     edge_width: int = 1,
-) -> None:
+) -> Optional[BoundingBox]:
     if isinstance(points, np.ndarray):
         assert points.shape == (3, 3)
         points_arr = points
@@ -62,13 +69,13 @@ def draw_triangle3d_z(
         assert len(points) == 3
         points_arr = np.array(points)
     if fill_color is None and edge_color is None:
-        return
+        return None
 
     nodes_2d = [camera.world_to_screen(node) for node in points_arr]
     center = np.mean(points_arr, axis=0)
     center_2d = camera.world_to_screen(center)
     if any(node_2d is None for node_2d in nodes_2d) or center_2d is None:
-        return
+        return None
     nodes_2d = cast(Sequence[Tuple[Vector, float]], nodes_2d)
     nodes_2d = [tuple(np.round(node_2d).astype(int)) for node_2d, _ in nodes_2d]
     # TODO: Uniform z-depth, will fail with intersecting polygons
@@ -81,6 +88,8 @@ def draw_triangle3d_z(
     if edge_color is not None:
         pygame.draw.polygon(buffer, edge_color, nodes_2d, edge_width)
         pygame.draw.polygon(z_buffer, z_val, nodes_2d, edge_width)
+
+    return get_bounding_box_2d(np.array(nodes_2d))
 
 
 def draw_circle3d(
@@ -108,10 +117,14 @@ def draw_circle3d_z(
     radius: float,
     n_points: int,
     width: int = 1,
-) -> None:
+) -> Sequence[BoundingBox]:
     starts, ends = get_3d_circle_points(center, normal, radius, n_points)
+    bounding_boxes: List[BoundingBox] = []
     for start, end in zip(starts, ends):
-        draw_line3d_z(buffer, z_buffer, camera, color, start, end, width)
+        bounding_box = draw_line3d_z(buffer, z_buffer, camera, color, start, end, width)
+        bounding_boxes.append(bounding_box)
+
+    return bounding_boxes
 
 
 def get_3d_circle_points(

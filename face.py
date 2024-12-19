@@ -8,7 +8,7 @@ from illumination import Illumination
 from draw import draw_line3d, draw_line3d_z, draw_triangle3d_z
 from node import Node
 from renderer import Drawable, distance_to_z_buffer
-from util import BLACK, GREEN, WHITE, Color, Vector
+from util import BLACK, GREEN, WHITE, BoundingBox, Color, Vector
 
 
 class Face(Drawable):
@@ -40,7 +40,7 @@ class Face(Drawable):
         z_buffer: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
-    ) -> None:
+    ) -> Optional[Sequence[BoundingBox]]:
         normal_to_camera = self.get_normal_to_camera(camera)
         illumination_level = illumination.get_surface_illumination(normal_to_camera)
         color = list(
@@ -48,7 +48,7 @@ class Face(Drawable):
         )
 
         nodes_3d = np.array([node.position for node in self.nodes])
-        draw_triangle3d_z(
+        bounding_box = draw_triangle3d_z(
             buffer, z_buffer, camera, color, self.edge_color, nodes_3d, edge_width=1
         )
 
@@ -57,3 +57,5 @@ class Face(Drawable):
             draw_line3d_z(
                 buffer, z_buffer, camera, GREEN, center, center + normal_to_camera
             )
+
+        return bounding_box and [bounding_box]

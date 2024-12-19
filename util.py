@@ -6,6 +6,7 @@ import numpy.typing as npt
 
 Vector = npt.NDArray[np.float64]
 Color = Union[Tuple[int, int, int], List[int]]
+BoundingBox = Tuple[int, int, int, int]
 
 
 WHITE = [255, 255, 255]
@@ -74,3 +75,16 @@ def closest_point_on_ray(
     lamda = -(origin - point).dot(direction)
 
     return origin + lamda * direction, lamda
+
+
+def get_bounding_box_2d(points: npt.NDArray) -> BoundingBox:
+    assert points.ndim == 2 and points.shape[1] == 2
+    start_x, start_y = np.min(points, axis=0)
+    end_x, end_y = np.max(points, axis=0)
+
+    return (
+        int(np.floor(start_x)),
+        int(np.ceil(end_x)),
+        int(np.floor(start_y)),
+        int(np.ceil(end_y)),
+    )

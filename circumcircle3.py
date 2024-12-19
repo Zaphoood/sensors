@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Sequence, Tuple, cast
 
 import numpy as np
 import pygame
@@ -10,7 +10,7 @@ from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
-from util import PINK, RED, Color, Vector, shift
+from util import PINK, RED, BoundingBox, Color, Vector, shift
 
 
 class CoordinateAxes:
@@ -48,8 +48,7 @@ class Circumcircle(Drawable):
         z_buffer: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
-    ) -> None:
-
+    ) -> Optional[Sequence[BoundingBox]]:
         params = self.get_circle_params()
         if params is not None:
             center, normal, radius = params
@@ -57,7 +56,7 @@ class Circumcircle(Drawable):
             center_node = Node(center, color=self.color)
             center_node.draw(buffer, z_buffer, camera, illumination)
 
-            draw_circle3d_z(
+            return draw_circle3d_z(
                 buffer,
                 z_buffer,
                 camera,
@@ -67,6 +66,8 @@ class Circumcircle(Drawable):
                 radius,
                 n_points=20,
             )
+
+        return None
 
     def get_circle_params(self) -> Optional[Tuple[Vector, Vector, float]]:
         """Return `center, normal, radius` of circle through the three nodes, if the

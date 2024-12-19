@@ -1,12 +1,13 @@
 from abc import ABCMeta, abstractmethod
 from contextlib import suppress
-from typing import List, Tuple
+from typing import List, Optional, Sequence, Tuple
+import time
 
 import numpy as np
 import pygame
 
 from camera import Camera
-from util import Color
+from util import BoundingBox, Color
 from illumination import Illumination
 
 
@@ -38,10 +39,11 @@ class Renderer:
         current_z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
 
         z_infinity = distance_to_z_value(float("inf"))
+        print("-" * 20)
         for drawable in self.drawables:
             current_buffer.fill(0)
             current_z_buffer.fill(z_value_to_z_buffer(z_infinity))
-            drawable.draw(
+            bounding_boxes = drawable.draw(
                 current_buffer, current_z_buffer, self.camera, self.illumination
             )
 
@@ -50,9 +52,26 @@ class Renderer:
             z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
             current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
 
-            visible = current_z_buffer_arr > z_buffer_arr
-            z_buffer_arr[visible] = current_z_buffer_arr[visible]
-            screen_arr[visible] = current_buffer_arr[visible]
+            t_start = time.time()
+            if bounding_boxes is None:
+                visible = current_z_buffer_arr > z_buffer_arr
+                z_buffer_arr[visible] = current_z_buffer_arr[visible]
+                screen_arr[visible] = current_buffer_arr[visible]
+            else:
+                for bounding_box in bounding_boxes:
+                    start_x, end_x, start_y, end_y = bounding_box
+                    visible = (
+                        current_z_buffer_arr[start_x:end_x, start_y:end_y]
+                        > z_buffer_arr[start_x:end_x, start_y:end_y]
+                    )
+                    z_buffer_arr[start_x:end_x, start_y:end_y][visible] = (
+                        current_z_buffer_arr[start_x:end_x, start_y:end_y][visible]
+                    )
+                    screen_arr[start_x:end_x, start_y:end_y][visible] = (
+                        current_buffer_arr[start_x:end_x, start_y:end_y][visible]
+                    )
+            t_end = time.time()
+            print(f"{drawable.__class__.__name__}: {(t_end - t_start)*1000:.1f} ms")
 
         z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
         screen_arr = pygame.surfarray.pixels3d(screen)
@@ -81,8 +100,10 @@ class Drawable(metaclass=ABCMeta):
         z_buffer: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
-    ) -> None:
+    ) -> Optional[Sequence[BoundingBox]]:
         # Z-buffer is an RGB surface. For now, only write to last (blue) channel.
         # It goes from 0 (farthest) to 255 (closest).
+        #
+        # Optionally, return a sequence of bounding boxes `(left, right, top, bottom)` of areas that were changed
 
         raise NotImplementedError()
