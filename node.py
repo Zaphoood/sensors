@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 import pygame
@@ -61,5 +61,5 @@ class Node(Drawable):
         pygame.draw.rect(buffer, self.color, rect, width)
         pygame.draw.rect(z_buffer, distance_to_z_buffer(z), rect, width)
 
-        bounding_box = (rect[0], rect[1], rect[0] + rect[2], rect[1] + rect[3])
+        bounding_box = (rect[0], rect[0] + rect[2], rect[1], rect[1] + rect[3])
         return [bounding_box]
