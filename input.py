@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, cast
+from typing import Callable, List, Optional, Tuple, cast
 
 import numpy as np
 import numpy.typing as npt
 import pygame
 
+from face import Face
 from node import Node
 from util import Vector, closest_point_on_ray
 from camera import Camera
@@ -38,9 +39,17 @@ class InputManager:
         start_yaw: float
         mouse_start: npt.NDArray[np.int64]
 
-    def __init__(self, nodes: List[Node], camera: Camera):
+    def __init__(
+        self,
+        nodes: List[Node],
+        faces: List[Face],
+        add_face: Callable[[Face], None],
+        camera: Camera,
+    ):
         self.nodes = nodes
-        self.selected_node: Optional[int] = None
+        self.faces = faces
+        self.create_face = add_face
+        self.selected_nodes: List[int] = []
         self.grab_info: Optional[InputManager.GrabInfo] = None
 
         self.camera = camera
@@ -85,6 +94,8 @@ class InputManager:
                 self.camera.pan(np.array([0, self.camera_rotate_step, 0]))
             elif event.key == pygame.K_e:
                 self.camera.pan(np.array([0, -self.camera_rotate_step, 0]))
+            elif event.key == pygame.K_f:
+                self.fill_face()
             elif event.key == pygame.K_r:
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                     self.camera.position = np.array([0.0, 0.0, -1.0])
@@ -95,7 +106,9 @@ class InputManager:
                     self.camera.reset_orientation()
             elif event.key == pygame.K_ESCAPE:
                 if self.grab_info is None:
-                    self.selected_node = None
+                    for node in self.selected_nodes:
+                        self.nodes[node].on_deselect()
+                    self.selected_nodes = []
                 else:
                     self.cancel_grab(self.grab_info)
             elif event.key == pygame.K_g:
@@ -106,7 +119,12 @@ class InputManager:
                 if self.grab_info is not None:
                     self.grab_info = None
                 else:
-                    self.handle_mouse_select(event)
+                    self.handle_mouse_select(
+                        event.pos,
+                        append_selection=bool(
+                            pygame.key.get_mods() & pygame.KMOD_SHIFT
+                        ),
+                    )
             elif event.button == 2:
                 if self.grab_info is not None:
                     return
@@ -134,10 +152,10 @@ class InputManager:
             self.handle_mouse_move(event.pos)
 
     def start_grab(self) -> None:
-        if self.selected_node is None:
+        if len(self.selected_nodes) != 1:
             return
 
-        grabbed_node = self.nodes[self.selected_node]
+        grabbed_node = self.nodes[self.selected_nodes[0]]
         plane_depth = self.camera.to_camera_coords(
             cast(Vector, grabbed_node.position - self.camera.position)
         )[2]
@@ -154,31 +172,44 @@ class InputManager:
         )
 
     def cancel_grab(self, grab_info: GrabInfo) -> None:
-        assert self.selected_node is not None
-        self.nodes[self.selected_node].position = grab_info.position_before
+        assert len(self.selected_nodes) == 1
+        self.nodes[self.selected_nodes[0]].position = grab_info.position_before
 
         self.grab_info = None
 
-    def handle_mouse_select(self, event: pygame.event.Event) -> None:
-        ray = self.camera.get_view_ray_world(event.pos)
-        close_candidates = []
+    def handle_mouse_select(
+        self, mouse_pos: Tuple[int, int], append_selection: bool = False
+    ) -> None:
+        ray = self.camera.get_view_ray_world(mouse_pos)
+        close_candidates: List[Tuple[int, float]] = []
         for i, node in enumerate(self.nodes):
             closest_coords, _ = closest_point_on_ray(
                 self.camera.position, ray, node.position
             )
             dist_to_node = np.linalg.norm(closest_coords - node.position)
             if dist_to_node <= NODE_HITBOX:
-                close_candidates.append((i, dist_to_node))
+                close_candidates.append((i, cast(float, dist_to_node)))
 
-        if self.selected_node is not None:
-            self.nodes[self.selected_node].on_deselect()
+        if not append_selection:
+            for node in self.selected_nodes:
+                self.nodes[node].on_deselect()
+
         if len(close_candidates) == 0:
-            self.selected_node = None
+            if not append_selection:
+                self.selected_nodes = []
         else:
-            self.selected_node = cast(
-                int, min(close_candidates, key=lambda el: el[1])[0]
-            )
-            self.nodes[self.selected_node].on_select()
+            target = min(close_candidates, key=lambda el: el[1])[0]
+
+            if append_selection:
+                if target in self.selected_nodes:
+                    self.nodes[target].on_deselect()
+                    self.selected_nodes.remove(target)
+                else:
+                    self.nodes[target].on_select()
+                    self.selected_nodes.append(target)
+            else:
+                self.nodes[target].on_select()
+                self.selected_nodes = [target]
 
     def handle_mouse_move(self, new_mouse_pos: Tuple[int, int]) -> None:
         if self.grab_info is not None:
@@ -191,13 +222,14 @@ class InputManager:
     def handle_grab_mouse_move(
         self, grab_info: GrabInfo, new_mouse_pos: Tuple[int, int]
     ) -> None:
-        assert self.selected_node is not None
+        if len(self.selected_nodes) != 1:
+            return
 
         new_view_ray = self.camera.get_view_ray(new_mouse_pos)
         new_view_ray_in_plane = self.camera.position + self.camera.from_camera_coords(
             new_view_ray * grab_info.plane_depth / new_view_ray[2]
         )
-        self.nodes[self.selected_node].position = cast(
+        self.nodes[self.selected_nodes[0]].position = cast(
             Vector, new_view_ray_in_plane - grab_info.offset
         )
 
@@ -234,3 +266,17 @@ class InputManager:
         direction = 1 if event.button == 4 else -1
         offset = self.camera_move_step * np.array([0, 0, direction])
         self.camera.pan(cast(Vector, offset))
+
+    def fill_face(self) -> None:
+        if len(self.selected_nodes) != 3:
+            return
+        nodes = cast(
+            Tuple[Node, Node, Node],
+            tuple(self.nodes[node] for node in self.selected_nodes),
+        )
+
+        for face in self.faces:
+            if set(face.nodes) == set(nodes):
+                return
+
+        self.create_face(Face(nodes))

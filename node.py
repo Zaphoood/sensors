@@ -45,10 +45,10 @@ class Node(Drawable):
         z_buffer: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
-    ) -> Optional[Sequence[BoundingBox]]:
+    ) -> Sequence[BoundingBox]:
         screen_pos = camera.world_to_screen(self.position)
         if screen_pos is None:
-            return None
+            return []
         center, z = screen_pos
 
         rect = [

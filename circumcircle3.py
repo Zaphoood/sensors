@@ -4,13 +4,13 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from renderer import Drawable, Renderer
 from draw import draw_circle3d_z, draw_line3d
 from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
-from util import PINK, RED, BoundingBox, Color, Vector, shift
+from renderer import Drawable, Renderer
+from util import PINK, RED, BoundingBox, Color, Vector
 
 
 class CoordinateAxes:
@@ -136,21 +136,21 @@ class App:
             Node(np.array([0, 0, -1])),
         ]
         self.nodes = [north_pole, south_pole, *equator]
-
-        self.faces: List[Face] = []
-        for node1, node2 in zip(equator, shift(equator)):
-            self.faces.append(Face((node1, node2, north_pole)))
-            self.faces.append(Face((node1, node2, south_pole)))
-
         for node in self.nodes:
             self.renderer.register_drawable(node)
-        for face in self.faces:
-            self.renderer.register_drawable(face)
+
+        self.faces: List[Face] = []
+
+        self.input_manager = InputManager(
+            self.nodes, self.faces, self.handle_add_face, self.camera
+        )
 
         self.circumcircle = Circumcircle([north_pole, equator[0], equator[1]], RED)
         self.renderer.register_drawable(self.circumcircle)
 
-        self.input_manager = InputManager(self.nodes, self.camera)
+    def handle_add_face(self, face: Face) -> None:
+        self.faces.append(face)
+        self.renderer.register_drawable(face)
 
     def update(self) -> bool:
         for event in pygame.event.get():
