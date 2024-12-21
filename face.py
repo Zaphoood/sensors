@@ -1,13 +1,13 @@
-from typing import Optional, Sequence, Tuple, cast
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 import pygame
 
 from camera import Camera
 from illumination import Illumination
-from draw import draw_line3d, draw_line3d_z, draw_triangle3d_z
+from draw import draw_line3d_z, draw_triangle3d_z
 from node import Node
-from renderer import Drawable, distance_to_z_buffer
+from renderer import Drawable
 from util import BLACK, GREEN, WHITE, BoundingBox, Color, Vector
 
 
