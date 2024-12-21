@@ -112,16 +112,20 @@ class Circumcircle(Drawable):
 
 
 class App:
-    def __init__(self, screen_size: Tuple[int, int]) -> None:
+    def __init__(self, screen: pygame.surface.Surface) -> None:
+        self.screen = screen
+        screen_dimensions = (screen.get_width(), screen.get_height())
         self.camera = Camera(
             np.array([0.8, 0.8, -1.0]),
             yaw=-np.pi / 10,
             pitch=-np.pi / 8,
             focal_length=300,
-            sensor_dimensions=screen_size,
+            sensor_dimensions=screen_dimensions,
         )
         self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.2)
-        self.renderer = Renderer(self.camera, self.illumination, background_color=PINK)
+        self.renderer = Renderer(
+            self.screen, self.camera, self.illumination, background_color=PINK
+        )
 
         north_pole = Node(np.array([0, 1, 0]))
         south_pole = Node(np.array([0, -1, 0]))
@@ -156,8 +160,8 @@ class App:
 
         return True
 
-    def draw(self, screen: pygame.Surface) -> None:
-        self.renderer.render(screen, show_fps=True)
+    def draw(self) -> None:
+        self.renderer.render(show_fps=True)
 
 
 def main():
@@ -165,14 +169,14 @@ def main():
     screen_size = (1200, 900)
     screen = pygame.display.set_mode(screen_size)
     pygame.display.set_caption("Circumcircle 3d")
-    app = App(screen_size)
+    app = App(screen)
     clock = pygame.time.Clock()
 
     while True:
         if not app.update():
             break
         clock.tick(60)
-        app.draw(screen)
+        app.draw()
         pygame.display.flip()
 
 

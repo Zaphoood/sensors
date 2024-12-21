@@ -16,10 +16,15 @@ FONT_SIZE = 20
 class Renderer:
     def __init__(
         self,
+        screen: pygame.surface.Surface,
         camera: Camera,
         illumination: Illumination,
         background_color: Color,
     ) -> None:
+        self.screen = screen
+        self.screen_width = screen.get_width()
+        self.screen_height = screen.get_height()
+
         self.camera = camera
         self.illumination = illumination
         self.background_color = background_color
@@ -31,6 +36,10 @@ class Renderer:
         self.current_second = 0
         self.font = pygame.font.SysFont("Courier", FONT_SIZE)
 
+        self._current_buffer = pygame.Surface((self.screen_width, self.screen_height))
+        self._z_buffer = pygame.Surface((self.screen_width, self.screen_height))
+        self._current_z_buffer = pygame.Surface((self.screen_width, self.screen_height))
+
     def register_drawable(self, drawable: "Drawable") -> None:
         if drawable not in self.drawables:
             self.drawables.append(drawable)
@@ -40,10 +49,7 @@ class Renderer:
         with suppress(ValueError):
             self.drawables.remove(drawable)
 
-    def render(self, screen: pygame.surface.Surface, show_fps: bool = False) -> None:
-        screen_width = screen.get_width()
-        screen_height = screen.get_height()
-
+    def render(self, show_fps: bool = False) -> None:
         second = int(time.time())
         if second != self.current_second:
             self.frames_last_second = self.frames_this_second
@@ -51,31 +57,32 @@ class Renderer:
             self.current_second = second
         self.frames_this_second += 1
 
-        screen.fill(self.background_color)
-
-        current_buffer = pygame.Surface((screen_width, screen_height))
-        z_buffer = pygame.Surface((screen_width, screen_height))
-        current_z_buffer = pygame.Surface((screen_width, screen_height))
-
-        screen_arr = pygame.surfarray.pixels2d(screen)
-        current_buffer_arr = pygame.surfarray.pixels2d(current_buffer)
-        current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
-
         z_buffer_fill = distance_to_z_buffer(float("inf"))
+
+        self.screen.fill(self.background_color)
+        self._z_buffer.fill(z_buffer_fill)
+
+        screen_arr = pygame.surfarray.pixels2d(self.screen)
+        current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
+        current_z_buffer_arr = pygame.surfarray.pixels2d(self._current_z_buffer)
+
         for drawable in self.drawables:
-            current_buffer.fill(0)
-            current_z_buffer.fill(z_buffer_fill)
+            self._current_buffer.fill(0)
+            self._current_z_buffer.fill(z_buffer_fill)
             bounding_boxes = drawable.draw(
-                current_buffer, current_z_buffer, self.camera, self.illumination
+                self._current_buffer,
+                self._current_z_buffer,
+                self.camera,
+                self.illumination,
             )
 
             if bounding_boxes is None:
-                z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
+                z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
                 visible = current_z_buffer_arr > z_buffer_arr
                 del z_buffer_arr
                 screen_arr[visible] = current_buffer_arr[visible]
-                z_buffer.blit(
-                    current_z_buffer,
+                self._z_buffer.blit(
+                    self._current_z_buffer,
                     (0, 0),
                     special_flags=pygame.BLEND_MAX,
                 )
@@ -83,11 +90,11 @@ class Renderer:
                 for bounding_box in bounding_boxes:
                     start_x, end_x, start_y, end_y = bounding_box
                     start_x = max(0, start_x)
-                    end_x = min(screen_width, end_x)
+                    end_x = min(self.screen_width, end_x)
                     start_y = max(0, start_y)
-                    end_y = min(screen_height, end_y)
+                    end_y = min(self.screen_height, end_y)
 
-                    z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
+                    z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
                     visible = (
                         current_z_buffer_arr[start_x:end_x, start_y:end_y]
                         > z_buffer_arr[start_x:end_x, start_y:end_y]
@@ -99,10 +106,10 @@ class Renderer:
                         current_buffer_arr[start_x:end_x, start_y:end_y][visible]
                     )
 
-                    current_z_buffer_patch = current_z_buffer.subsurface(
+                    current_z_buffer_patch = self._current_z_buffer.subsurface(
                         [start_x, start_y, end_x - start_x, end_y - start_y]
                     )
-                    z_buffer.blit(
+                    self._z_buffer.blit(
                         current_z_buffer_patch,
                         (start_x, start_y),
                         special_flags=pygame.BLEND_MAX,
@@ -112,10 +119,10 @@ class Renderer:
         del screen_arr
 
         if show_fps:
-            self.draw_fps(screen)
+            self.draw_fps()
 
-    def draw_fps(self, screen: pygame.surface.Surface) -> None:
-        screen.blit(
+    def draw_fps(self) -> None:
+        self.screen.blit(
             self.font.render(f"fps: {self.frames_last_second}", True, BLACK),
             (10, 10),
         )
