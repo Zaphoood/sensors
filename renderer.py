@@ -53,30 +53,32 @@ class Renderer:
 
         screen.fill(self.background_color)
 
-        current_buffer = pygame.Surface(
-            (screen.get_width(), screen.get_height()), flags=pygame.SRCALPHA
-        )
-        z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
-        current_z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
+        current_buffer = pygame.Surface((screen_width, screen_height))
+        z_buffer = pygame.Surface((screen_width, screen_height))
+        current_z_buffer = pygame.Surface((screen_width, screen_height))
 
-        z_infinity = distance_to_z_value(float("inf"))
         screen_arr = pygame.surfarray.pixels2d(screen)
+        current_buffer_arr = pygame.surfarray.pixels2d(current_buffer)
+        current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
 
+        z_buffer_fill = distance_to_z_buffer(float("inf"))
         for drawable in self.drawables:
             current_buffer.fill(0)
-            current_z_buffer.fill(z_value_to_z_buffer(z_infinity))
+            current_z_buffer.fill(z_buffer_fill)
             bounding_boxes = drawable.draw(
                 current_buffer, current_z_buffer, self.camera, self.illumination
             )
 
-            current_buffer_arr = pygame.surfarray.pixels2d(current_buffer)
-            current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
-
             if bounding_boxes is None:
                 z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
                 visible = current_z_buffer_arr > z_buffer_arr
-                z_buffer_arr[visible] = current_z_buffer_arr[visible]
+                del z_buffer_arr
                 screen_arr[visible] = current_buffer_arr[visible]
+                z_buffer.blit(
+                    current_z_buffer,
+                    (0, 0),
+                    special_flags=pygame.BLEND_MAX,
+                )
             else:
                 for bounding_box in bounding_boxes:
                     start_x, end_x, start_y, end_y = bounding_box
