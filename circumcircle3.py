@@ -170,12 +170,10 @@ def main():
     screen = pygame.display.set_mode(screen_size)
     pygame.display.set_caption("Circumcircle 3d")
     app = App(screen)
-    clock = pygame.time.Clock()
 
     while True:
         if not app.update():
             break
-        clock.tick(60)
         app.draw()
         pygame.display.flip()
 
