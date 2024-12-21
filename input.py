@@ -62,39 +62,7 @@ class InputManager:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    self.camera.orbit(0, -self.camera_rotate_step)
-                else:
-                    self.camera.change_yaw(self.camera_rotate_step)
-            elif event.key == pygame.K_LEFT:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    self.camera.orbit(0, self.camera_rotate_step)
-                else:
-                    self.camera.change_yaw(-self.camera_rotate_step)
-            if event.key == pygame.K_UP:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    self.camera.orbit(-self.camera_rotate_step, 0)
-                else:
-                    self.camera.change_pitch(self.camera_rotate_step)
-            elif event.key == pygame.K_DOWN:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    self.camera.orbit(self.camera_rotate_step, 0)
-                else:
-                    self.camera.change_pitch(-self.camera_rotate_step)
-            elif event.key == pygame.K_w:
-                self.camera.pan(np.array([0, 0, self.camera_rotate_step]))
-            elif event.key == pygame.K_a:
-                self.camera.pan(np.array([-self.camera_rotate_step, 0, 0]))
-            elif event.key == pygame.K_s:
-                self.camera.pan(np.array([0, 0, -self.camera_rotate_step]))
-            elif event.key == pygame.K_d:
-                self.camera.pan(np.array([self.camera_rotate_step, 0, 0]))
-            elif event.key == pygame.K_y:
-                self.camera.pan(np.array([0, self.camera_rotate_step, 0]))
-            elif event.key == pygame.K_e:
-                self.camera.pan(np.array([0, -self.camera_rotate_step, 0]))
-            elif event.key == pygame.K_f:
+            if event.key == pygame.K_f:
                 self.fill_face()
             elif event.key == pygame.K_r:
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
