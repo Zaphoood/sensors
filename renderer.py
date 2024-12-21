@@ -41,6 +41,9 @@ class Renderer:
             self.drawables.remove(drawable)
 
     def render(self, screen: pygame.surface.Surface, show_fps: bool = False) -> None:
+        screen_width = screen.get_width()
+        screen_height = screen.get_height()
+
         second = int(time.time())
         if second != self.current_second:
             self.frames_last_second = self.frames_this_second
@@ -77,6 +80,10 @@ class Renderer:
             else:
                 for bounding_box in bounding_boxes:
                     start_x, end_x, start_y, end_y = bounding_box
+                    start_x = max(0, start_x)
+                    end_x = min(screen_width, end_x)
+                    start_y = max(0, start_y)
+                    end_y = min(screen_height, end_y)
 
                     z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
                     visible = (
@@ -98,6 +105,7 @@ class Renderer:
                         (start_x, start_y),
                         special_flags=pygame.BLEND_MAX,
                     )
+
         # Unlock `screen` Surface
         del screen_arr
 
