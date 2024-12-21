@@ -89,10 +89,10 @@ class Renderer:
             else:
                 for bounding_box in bounding_boxes:
                     start_x, end_x, start_y, end_y = bounding_box
-                    start_x = max(0, start_x)
-                    end_x = min(self.screen_width, end_x)
-                    start_y = max(0, start_y)
-                    end_y = min(self.screen_height, end_y)
+                    start_x = np.clip(start_x, 0, self.screen_width)
+                    end_x = np.clip(end_x, 0, self.screen_width)
+                    start_y = np.clip(start_y, 0, self.screen_height)
+                    end_y = np.clip(end_y, 0, self.screen_height)
 
                     z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
                     visible = (
