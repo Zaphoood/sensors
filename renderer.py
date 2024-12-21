@@ -1,14 +1,14 @@
+import time
 from abc import ABCMeta, abstractmethod
 from contextlib import suppress
 from typing import List, Optional, Sequence, Tuple
-import time
 
 import numpy as np
 import pygame
 
 from camera import Camera
-from util import BLACK, BoundingBox, Color
 from illumination import Illumination
+from util import BLACK, BoundingBox, Color
 
 FONT_SIZE = 20
 
@@ -48,11 +48,17 @@ class Renderer:
             self.current_second = second
         self.frames_this_second += 1
 
-        current_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
+        screen.fill(self.background_color)
+
+        current_buffer = pygame.Surface(
+            (screen.get_width(), screen.get_height()), flags=pygame.SRCALPHA
+        )
         z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
         current_z_buffer = pygame.Surface((screen.get_width(), screen.get_height()))
 
         z_infinity = distance_to_z_value(float("inf"))
+        screen_arr = pygame.surfarray.pixels2d(screen)
+
         for drawable in self.drawables:
             current_buffer.fill(0)
             current_z_buffer.fill(z_value_to_z_buffer(z_infinity))
@@ -60,33 +66,39 @@ class Renderer:
                 current_buffer, current_z_buffer, self.camera, self.illumination
             )
 
-            screen_arr = pygame.surfarray.pixels2d(screen)
             current_buffer_arr = pygame.surfarray.pixels2d(current_buffer)
-            z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
             current_z_buffer_arr = pygame.surfarray.pixels2d(current_z_buffer)
 
             if bounding_boxes is None:
+                z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
                 visible = current_z_buffer_arr > z_buffer_arr
                 z_buffer_arr[visible] = current_z_buffer_arr[visible]
                 screen_arr[visible] = current_buffer_arr[visible]
             else:
                 for bounding_box in bounding_boxes:
                     start_x, end_x, start_y, end_y = bounding_box
+
+                    z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
                     visible = (
                         current_z_buffer_arr[start_x:end_x, start_y:end_y]
                         > z_buffer_arr[start_x:end_x, start_y:end_y]
                     )
-                    z_buffer_arr[start_x:end_x, start_y:end_y][visible] = (
-                        current_z_buffer_arr[start_x:end_x, start_y:end_y][visible]
-                    )
+                    # Unlock `z_buffer` Surface by deleting array reference
+                    del z_buffer_arr
+
                     screen_arr[start_x:end_x, start_y:end_y][visible] = (
                         current_buffer_arr[start_x:end_x, start_y:end_y][visible]
                     )
 
-        z_buffer_arr = pygame.surfarray.pixels2d(z_buffer)
-        screen_arr = pygame.surfarray.pixels3d(screen)
-        screen_arr[z_buffer_arr == z_infinity] = self.background_color
-        # Need to delete this in order to unlock screen Surface
+                    current_z_buffer_patch = current_z_buffer.subsurface(
+                        [start_x, start_y, end_x - start_x, end_y - start_y]
+                    )
+                    z_buffer.blit(
+                        current_z_buffer_patch,
+                        (start_x, start_y),
+                        special_flags=pygame.BLEND_MAX,
+                    )
+        # Unlock `screen` Surface
         del screen_arr
 
         if show_fps:
