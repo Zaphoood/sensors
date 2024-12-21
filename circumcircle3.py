@@ -10,7 +10,7 @@ from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Drawable, Renderer
-from util import PINK, RED, BoundingBox, Color, Vector
+from util import PINK, BoundingBox, Color, Vector
 
 
 class CoordinateAxes:
@@ -127,15 +127,8 @@ class App:
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        north_pole = Node(np.array([0, 1, 0]))
-        south_pole = Node(np.array([0, -1, 0]))
-        equator = [
-            Node(np.array([1, 0, 0])),
-            Node(np.array([0, 0, 1])),
-            Node(np.array([-1, 0, 0])),
-            Node(np.array([0, 0, -1])),
-        ]
-        self.nodes = [north_pole, south_pole, *equator]
+        n_nodes = 30
+        self.nodes = [Node(position) for position in random_scatter_sphere(n_nodes)]
         for node in self.nodes:
             self.renderer.register_drawable(node)
 
@@ -144,9 +137,6 @@ class App:
         self.input_manager = InputManager(
             self.nodes, self.faces, self.handle_add_face, self.camera
         )
-
-        self.circumcircle = Circumcircle([north_pole, equator[0], equator[1]], RED)
-        self.renderer.register_drawable(self.circumcircle)
 
     def handle_add_face(self, face: Face) -> None:
         self.faces.append(face)
@@ -162,6 +152,20 @@ class App:
 
     def draw(self) -> None:
         self.renderer.render(show_fps=True)
+
+
+def random_scatter_sphere(n: int) -> List[Vector]:
+    """Randomly scatter `n` points on the surface of the 2-sphere"""
+    points = []
+    while len(points) < n:
+        point = (np.random.random(3) * 2) - 1
+        norm = np.linalg.norm(point)
+        if not 0 < norm <= 1:
+            continue
+
+        points.append(cast(Vector, point / norm))
+
+    return points
 
 
 def main():
