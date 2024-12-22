@@ -10,7 +10,7 @@ from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Drawable, Renderer
-from util import PINK, BoundingBox, Color, Vector
+from util import PINK, BoundingBox, Color, Vector, load_triangulation
 
 
 class CoordinateAxes:
@@ -127,12 +127,16 @@ class App:
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        n_nodes = 30
-        self.nodes = [Node(position) for position in random_scatter_sphere(n_nodes)]
+        points, triangles = load_triangulation("triangulation.txt")
+        self.nodes = [Node(points) for points in points]
+        self.faces = [
+            Face((self.nodes[t[0]], self.nodes[t[1]], self.nodes[t[2]]))
+            for t in triangles
+        ]
         for node in self.nodes:
             self.renderer.register_drawable(node)
-
-        self.faces: List[Face] = []
+        for face in self.faces:
+            self.renderer.register_drawable(face)
 
         self.input_manager = InputManager(
             self.nodes, self.faces, self.handle_add_face, self.camera

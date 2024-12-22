@@ -1,12 +1,12 @@
-from typing import List, Sequence, Tuple, Union, TypeVar, cast
+from typing import List, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import numpy.typing as npt
 
-
 Vector = npt.NDArray[np.float64]
 Color = Union[Tuple[int, int, int], List[int]]
 BoundingBox = Tuple[int, int, int, int]
+Triangle = Tuple[int, int, int]
 
 
 WHITE = [255, 255, 255]
@@ -88,3 +88,30 @@ def get_bounding_box_2d(points: npt.NDArray) -> BoundingBox:
         int(np.floor(start_y)),
         int(np.ceil(end_y)),
     )
+
+
+def load_triangulation(path: str) -> Tuple[List[Vector], List[Triangle]]:
+    reading_points = True
+    points: List[Vector] = []
+    triangles: List[Tuple[int, int, int]] = []
+
+    with open(path, "r") as file:
+        for line in file.readlines():
+            line = line.strip()
+            if reading_points:
+                if len(line) == 0:
+                    reading_points = False
+                    continue
+
+                point = np.fromstring(line, sep=" ")
+                if point.shape != (3,):
+                    raise ValueError(f"Vector must be of length 3 but got: '{line}'")
+                points.append(point)
+
+            else:
+                triangle = tuple(map(int, line.split()))
+                if len(triangle) != 3:
+                    raise ValueError(f"Triangle must be of length 3 but got: '{line}'")
+                triangles.append(triangle)
+
+    return points, triangles
