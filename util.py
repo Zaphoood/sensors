@@ -90,6 +90,17 @@ def get_bounding_box_2d(points: npt.NDArray) -> BoundingBox:
     )
 
 
+def save_triangulation(
+    path: str, points: List[Vector], triangles: List[Triangle]
+) -> None:
+    with open(path, "w") as file:
+        for point in points:
+            file.write(" ".join(str(el) for el in point) + "\n")
+        file.write("\n")
+        for triangle in triangles:
+            file.write(" ".join(str(el) for el in triangle) + "\n")
+
+
 def load_triangulation(path: str) -> Tuple[List[Vector], List[Triangle]]:
     reading_points = True
     points: List[Vector] = []
