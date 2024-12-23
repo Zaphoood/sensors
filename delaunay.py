@@ -33,93 +33,97 @@ def get_adjacent_triangles(
     return adjacent_triangles
 
 
-class DelaunaySolver:
-    def __init__(
-        self,
-        points: List[Vector],
-        triangles: List[Triangle],
-        verbose: bool = False,
-    ) -> None:
-        self.points = points
-        self.triangles = triangles
-        self.adjacent_triangles = get_adjacent_triangles(triangles)
-        self.verbose = verbose
+def get_delaunay(
+    points: List[Vector], triangles: List[Triangle], verbose: bool = False
+) -> List[Triangle]:
+    adjacent_triangles = get_adjacent_triangles(triangles)
+    any_flipped = True
+    while any_flipped:
+        if verbose:
+            print("--- Iteration ---")
+        any_flipped = False
+        edges = list(adjacent_triangles.keys())
+        for edge in edges:
+            adjacent_vertices = tuple(adjacent_triangles[edge])
+            if len(adjacent_vertices) != 2:
+                continue
 
-    def solve(self) -> List[Triangle]:
-        any_flipped = True
-        while any_flipped:
-            if self.verbose:
-                print("--- Iteration ---")
-            any_flipped = False
-            edges = list(self.adjacent_triangles.keys())
-            for edge in edges:
-                adjacent_vertices = self.adjacent_triangles[edge]
-                if len(adjacent_vertices) < 2:
-                    continue
+            if should_flip(points, edge, adjacent_vertices, verbose):
+                flip_edge(adjacent_triangles, edge, verbose)
+                any_flipped = True
 
-                if self.should_flip(edge, (adjacent_vertices[0], adjacent_vertices[1])):
-                    self.flip_edge(edge, (adjacent_vertices[0], adjacent_vertices[1]))
-                    any_flipped = True
+    new_triangulation: Set[Triangle] = set()
+    for edge, adjacent_vertices in adjacent_triangles.items():
+        for vertex in adjacent_vertices:
+            new_triangulation.add(sort_triangle((*edge, vertex)))
 
-        new_triangulation: Set[Triangle] = set()
-        for edge, adjacent_vertices in self.adjacent_triangles.items():
-            for vertex in adjacent_vertices:
-                new_triangulation.add(sort_triangle((*edge, vertex)))
+    return list(new_triangulation)
 
-        return list(new_triangulation)
 
-    def should_flip(self, edge: Tuple[int, int], adjacent: Tuple[int, int]) -> bool:
-        """Return True if the `edge` with adjacent triangles `(edge[0], edge[1], adjacent[0])`
-        and `(edge[0], edge[1], adjacent[1])` is *not* locally delaunay, by checking whether w lies in the circumcircle
-        of xyz"""
+def should_flip(
+    points: List[Vector],
+    edge: Tuple[int, int],
+    adjacent: Tuple[int, int],
+    verbose: bool = False,
+) -> bool:
+    """Return True if the `edge` with adjacent triangles `(edge[0], edge[1], adjacent[0])`
+    and `(edge[0], edge[1], adjacent[1])` is *not* locally delaunay, by checking whether w lies in the circumcircle
+    of xyz"""
+    if verbose:
+        print(f"Checking edge {edge} for flipping")
 
-        if self.verbose:
-            print(f"Checking edge {edge} for flipping")
-        x = self.points[edge[0]]
-        y = self.points[edge[1]]
-        z = self.points[adjacent[0]]
-        w = self.points[adjacent[1]]
-        cc_params = get_circumcircle(x, y, z)
-        if cc_params is None:
-            raise ValueError(f"Points are collinear: {x}, {y}, {z}")
+    x = points[edge[0]]
+    y = points[edge[1]]
+    z = points[adjacent[0]]
+    w = points[adjacent[1]]
+    cc_params = get_circumcircle(x, y, z)
+    if cc_params is None:
+        raise ValueError(f"Points are collinear: {x}, {y}, {z}")
 
-        center, _, radius = cc_params
+    center, _, radius = cc_params
 
-        geodesic_radius = np.arcsin(radius)
-        epicenter = cast(Vector, center / np.linalg.norm(center))
-        geodesic_dist_w = geodesic_distance(epicenter, w)
-        if self.verbose:
-            print(f"Center {center}, radius {radius:.3f}")
-            print(f"Epicenter {epicenter}, geodesic radius {geodesic_radius:.3f})")
-        if self.verbose:
-            print(f"Geodesic distance of w from center: {geodesic_dist_w}")
+    geodesic_radius = np.arcsin(radius)
+    epicenter = cast(Vector, center / np.linalg.norm(center))
+    geodesic_dist_w = geodesic_distance(epicenter, w)
+    if verbose:
+        print(f"Center {center}, radius {radius:.3f}")
+        print(f"Epicenter {epicenter}, geodesic radius {geodesic_radius:.3f})")
+    if verbose:
+        print(f"Geodesic distance of w from center: {geodesic_dist_w}")
 
-        return geodesic_dist_w < geodesic_radius
+    return geodesic_dist_w < geodesic_radius
 
-    def flip_edge(self, edge: Tuple[int, int], adjacent: Tuple[int, int]) -> None:
-        if self.verbose:
-            print(f"Flipping {edge} => {adjacent}")
-        self.adjacent_triangles.pop(edge)
-        self.adjacent_triangles[sort_edge(adjacent)] = list(edge)
 
-        a, b = edge
-        c, d = adjacent
+def flip_edge(
+    adjacent_triangles: Dict[Tuple[int, int], List[int]],
+    edge: Tuple[int, int],
+    verbose: bool = False,
+) -> None:
+    adjacent = tuple(adjacent_triangles[edge])
+    assert len(adjacent) == 2
+    if verbose:
+        print(f"Flipping {edge} => {adjacent}")
+    adjacent_triangles.pop(edge)
+    adjacent_triangles[sort_edge(adjacent)] = list(edge)
 
-        ac = sort_edge((a, c))
-        self.adjacent_triangles[ac].remove(b)
-        self.adjacent_triangles[ac].append(d)
+    a, b = edge
+    c, d = adjacent
 
-        bc = sort_edge((b, c))
-        self.adjacent_triangles[bc].remove(a)
-        self.adjacent_triangles[bc].append(d)
+    ac = sort_edge((a, c))
+    adjacent_triangles[ac].remove(b)
+    adjacent_triangles[ac].append(d)
 
-        ad = sort_edge((a, d))
-        self.adjacent_triangles[ad].remove(b)
-        self.adjacent_triangles[ad].append(c)
+    bc = sort_edge((b, c))
+    adjacent_triangles[bc].remove(a)
+    adjacent_triangles[bc].append(d)
 
-        bd = sort_edge((b, d))
-        self.adjacent_triangles[bd].remove(a)
-        self.adjacent_triangles[bd].append(c)
+    ad = sort_edge((a, d))
+    adjacent_triangles[ad].remove(b)
+    adjacent_triangles[ad].append(c)
+
+    bd = sort_edge((b, d))
+    adjacent_triangles[bd].remove(a)
+    adjacent_triangles[bd].append(c)
 
 
 def geodesic_distance(v: Vector, w: Vector) -> float:
@@ -174,7 +178,6 @@ def main():
     ds = DelaunaySolver(
         points,
         triangles,
-        verbose=False,
     )
     delaunay_triangulation = ds.solve()
     for triangle in delaunay_triangulation:

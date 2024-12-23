@@ -5,7 +5,7 @@ import numpy as np
 import pygame
 
 from camera import Camera
-from delaunay import DelaunaySolver
+from delaunay import get_delaunay
 from draw import draw_line3d
 from face import Face
 from illumination import Illumination, Sun
@@ -66,11 +66,6 @@ class App:
         for face in self.faces:
             self.renderer.register_drawable(face)
 
-        self.delaunay_solver = DelaunaySolver(
-            points,
-            self.triangles,
-        )
-
         self.input_manager = InputManager(
             self.nodes,
             self.faces,
@@ -83,8 +78,9 @@ class App:
         )
 
     def run_delaunay(self) -> None:
-        ds = DelaunaySolver([node.position for node in self.nodes], self.triangles)
-        delaunay_triangulation = ds.solve()
+        delaunay_triangulation = get_delaunay(
+            [node.position for node in self.nodes], self.triangles
+        )
 
         for face in self.faces:
             self.renderer.deregister_drawable(face)
