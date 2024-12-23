@@ -44,6 +44,8 @@ class InputManager:
         nodes: List[Node],
         faces: List[Face],
         add_face: Callable[[Face], None],
+        # Arbitrary callback on space key
+        on_space: Callable[[], None],
         camera: Camera,
     ):
         self.nodes = nodes
@@ -59,6 +61,8 @@ class InputManager:
         self.camera_move_step = 0.2
         self.camera_rotate_step = np.pi / 20
         self.rotation_factor: float = np.pi / 300
+
+        self.on_space = on_space
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
@@ -81,6 +85,8 @@ class InputManager:
                     self.cancel_grab(self.grab_info)
             elif event.key == pygame.K_g:
                 self.start_grab()
+            elif event.key == pygame.K_SPACE:
+                self.on_space()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:

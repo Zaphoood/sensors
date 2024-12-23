@@ -56,13 +56,10 @@ class App:
 
         points, triangles = load_triangulation("triangulation.txt")
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
-        self.triangles = [
+        self.triangles: List[Triangle] = [
             cast(Triangle, tuple(sorted(triangle))) for triangle in triangles
         ]
-        self.faces = [
-            Face((self.nodes[t[0]], self.nodes[t[1]], self.nodes[t[2]]))
-            for t in self.triangles
-        ]
+        self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)
         for node in self.nodes:
             self.renderer.register_drawable(node)
         for face in self.faces:
@@ -74,8 +71,20 @@ class App:
         )
 
         self.input_manager = InputManager(
-            self.nodes, self.faces, self.handle_add_face, self.camera
+            self.nodes, self.faces, self.handle_add_face, self.run_delaunay, self.camera
         )
+
+    def run_delaunay(self) -> None:
+        ds = DelaunaySolver([node.position for node in self.nodes], self.triangles)
+        delaunay_triangulation = ds.solve()
+
+        for face in self.faces:
+            self.renderer.deregister_drawable(face)
+
+        self.triangles = delaunay_triangulation
+        self.faces = triangles_to_faces(self.nodes, self.triangles)
+        for face in self.faces:
+            self.renderer.register_drawable(face)
 
     def handle_add_triangle(self, triangle: Triangle) -> None:
         triangle = cast(Triangle, tuple(sorted(triangle)))
@@ -119,6 +128,10 @@ class App:
 
     def draw(self) -> None:
         self.renderer.render(show_fps=True)
+
+
+def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Face]:
+    return [Face((nodes[t[0]], nodes[t[1]], nodes[t[2]])) for t in triangles]
 
 
 def random_scatter_sphere(n: int) -> List[Vector]:

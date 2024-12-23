@@ -48,7 +48,8 @@ class DelaunaySolver:
     def solve(self) -> List[Triangle]:
         any_flipped = True
         while any_flipped:
-            print("--- Iteration ---")
+            if self.verbose:
+                print("--- Iteration ---")
             any_flipped = False
             edges = list(self.adjacent_triangles.keys())
             for edge in edges:
@@ -96,7 +97,8 @@ class DelaunaySolver:
         return geodesic_dist_w < geodesic_radius
 
     def flip_edge(self, edge: Tuple[int, int], adjacent: Tuple[int, int]) -> None:
-        print(f"Flipping {edge} => {adjacent}")
+        if self.verbose:
+            print(f"Flipping {edge} => {adjacent}")
         self.adjacent_triangles.pop(edge)
         self.adjacent_triangles[sort_edge(adjacent)] = list(edge)
 
@@ -191,8 +193,8 @@ def main():
     ds = DelaunaySolver(
         points,
         triangles,
-        make_handle_add_triangle(triangles),
-        make_handle_remove_triangle(triangles),
+        # make_handle_add_triangle(triangles),
+        # make_handle_remove_triangle(triangles),
         verbose=False,
     )
     delaunay_triangulation = ds.solve()
