@@ -97,34 +97,6 @@ class App:
         save_triangulation(path, [node.position for node in self.nodes], self.triangles)
         print(f"Saved current triangulation to '{path}'")
 
-    def handle_add_triangle(self, triangle: Triangle) -> None:
-        triangle = cast(Triangle, tuple(sorted(triangle)))
-        if triangle in self.triangles:
-            print(f"WARNGING: refusing to add existing triangle {triangle}")
-            return
-
-        self.triangles.append(triangle)
-        new_face = Face(
-            (
-                self.nodes[triangle[0]],
-                self.nodes[triangle[1]],
-                self.nodes[triangle[2]],
-            )
-        )
-        self.faces.append(new_face)
-        self.renderer.register_drawable(new_face)
-
-    def handle_remove_triangle(self, idx: int) -> None:
-        triangle_to_remove = self.triangles[idx]
-        nodes = set(self.nodes[idx] for idx in triangle_to_remove)
-        for i, face in enumerate(self.faces):
-            if set(face.nodes) == set(nodes):
-                self.renderer.deregister_drawable(face)
-                self.faces.pop(i)
-                break
-
-        self.triangles.pop(idx)
-
     def handle_add_face(self, face: Face) -> None:
         self.faces.append(face)
         self.renderer.register_drawable(face)
