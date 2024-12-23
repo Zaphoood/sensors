@@ -74,13 +74,17 @@ class Renderer:
                 self.illumination,
             )
 
-            current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
-            current_z_buffer_arr = pygame.surfarray.pixels2d(self._current_z_buffer)
             if bounding_boxes is None:
                 z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
+                current_z_buffer_arr = pygame.surfarray.pixels2d(self._current_z_buffer)
                 visible = current_z_buffer_arr > z_buffer_arr
                 del z_buffer_arr
+                del current_z_buffer_arr
+
+                current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
                 screen_arr[visible] = current_buffer_arr[visible]
+                del current_buffer_arr
+
                 self._z_buffer.blit(
                     self._current_z_buffer,
                     (0, 0),
@@ -95,16 +99,22 @@ class Renderer:
                     end_y = np.clip(end_y, 0, self.screen_height)
 
                     z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
+                    current_z_buffer_arr = pygame.surfarray.pixels2d(
+                        self._current_z_buffer
+                    )
                     visible = (
                         current_z_buffer_arr[start_x:end_x, start_y:end_y]
                         > z_buffer_arr[start_x:end_x, start_y:end_y]
                     )
                     # Unlock `z_buffer` Surface by deleting array reference
                     del z_buffer_arr
+                    del current_z_buffer_arr
 
+                    current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
                     screen_arr[start_x:end_x, start_y:end_y][visible] = (
                         current_buffer_arr[start_x:end_x, start_y:end_y][visible]
                     )
+                    del current_buffer_arr
 
                     current_z_buffer_patch = self._current_z_buffer.subsurface(
                         [start_x, start_y, end_x - start_x, end_y - start_y]
@@ -114,8 +124,6 @@ class Renderer:
                         (start_x, start_y),
                         special_flags=pygame.BLEND_MAX,
                     )
-            del current_buffer_arr
-            del current_z_buffer_arr
 
         # Unlock `screen` Surface
         del screen_arr
