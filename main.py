@@ -1,4 +1,3 @@
-from types import NotImplementedType
 from typing import List, Tuple, cast
 
 import numpy as np
@@ -77,7 +76,7 @@ class App:
         )
 
         self.input_manager = InputManager(
-            self.nodes, self.faces, self.handle_add_face, self.handle_step, self.camera
+            self.nodes, self.faces, self.handle_add_face, self.camera
         )
 
     def handle_step(self) -> None:
