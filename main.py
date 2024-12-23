@@ -92,20 +92,6 @@ def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Fac
     return [Face((nodes[t[0]], nodes[t[1]], nodes[t[2]])) for t in triangles]
 
 
-def random_scatter_sphere(n: int) -> List[Vector]:
-    """Randomly scatter `n` points on the surface of the 2-sphere"""
-    points = []
-    while len(points) < n:
-        point = (np.random.random(3) * 2) - 1
-        norm = np.linalg.norm(point)
-        if not 0 < norm <= 1:
-            continue
-
-        points.append(cast(Vector, point / norm))
-
-    return points
-
-
 def main():
     pygame.init()
     screen_size = (1200, 900)
