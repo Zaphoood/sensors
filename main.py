@@ -71,7 +71,11 @@ class App:
         )
 
         self.input_manager = InputManager(
-            self.nodes, self.faces, self.handle_add_face, self.run_delaunay, self.camera
+            self.nodes,
+            self.faces,
+            self.handle_add_face,
+            self.camera,
+            key_callbacks={pygame.K_SPACE: (lambda _: self.run_delaunay())},
         )
 
     def run_delaunay(self) -> None:
