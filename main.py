@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Tuple, cast
 
 import numpy as np
@@ -11,7 +12,7 @@ from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Renderer
-from util import PINK, Color, Triangle, Vector, load_triangulation
+from util import PINK, Color, Triangle, Vector, load_triangulation, save_triangulation
 
 
 class CoordinateAxes:
@@ -54,7 +55,7 @@ class App:
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        points, triangles = load_triangulation("triangulation.txt")
+        points, triangles = load_triangulation("examples/triangulation.txt")
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
         self.triangles: List[Triangle] = [
             cast(Triangle, tuple(sorted(triangle))) for triangle in triangles
@@ -75,7 +76,10 @@ class App:
             self.faces,
             self.handle_add_face,
             self.camera,
-            key_callbacks={pygame.K_SPACE: (lambda _: self.run_delaunay())},
+            key_callbacks={
+                pygame.K_SPACE: (lambda _: self.run_delaunay()),
+                pygame.K_e: (lambda _: self.export_triangulation()),
+            },
         )
 
     def run_delaunay(self) -> None:
@@ -89,6 +93,13 @@ class App:
         self.faces = triangles_to_faces(self.nodes, self.triangles)
         for face in self.faces:
             self.renderer.register_drawable(face)
+
+    def export_triangulation(self) -> None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = f"triangulation_{timestamp}.txt"
+
+        save_triangulation(path, [node.position for node in self.nodes], self.triangles)
+        print(f"Saved current triangulation to '{path}'")
 
     def handle_add_triangle(self, triangle: Triangle) -> None:
         triangle = cast(Triangle, tuple(sorted(triangle)))
