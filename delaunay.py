@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 
 import numpy as np
 
@@ -167,25 +167,6 @@ def get_circumcircle(
     )
 
 
-def make_handle_add_triangle(triangles: List[Triangle]) -> Callable[[Triangle], None]:
-    def handle_add_triangle(triangle: Triangle) -> None:
-        triangle = cast(Triangle, tuple(sorted(triangle)))
-        if triangle in triangles:
-            print(f"WARNGING: refusing to add existing triangle {triangle}")
-            return
-
-        triangles.append(triangle)
-
-    return handle_add_triangle
-
-
-def make_handle_remove_triangle(triangles: List[Triangle]) -> Callable[[int], None]:
-    def handle_remove_triangle(idx: int) -> None:
-        triangles.pop(idx)
-
-    return handle_remove_triangle
-
-
 def main():
     points, triangles = load_triangulation("triangulation.txt")
     triangles = [cast(Triangle, tuple(sorted(triangle))) for triangle in triangles]
@@ -193,8 +174,6 @@ def main():
     ds = DelaunaySolver(
         points,
         triangles,
-        # make_handle_add_triangle(triangles),
-        # make_handle_remove_triangle(triangles),
         verbose=False,
     )
     delaunay_triangulation = ds.solve()
