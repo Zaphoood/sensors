@@ -71,16 +71,11 @@ class App:
         self.delaunay_solver = DelaunaySolver(
             points,
             self.triangles,
-            self.handle_add_triangle,
-            self.handle_remove_triangle,
         )
 
         self.input_manager = InputManager(
             self.nodes, self.faces, self.handle_add_face, self.camera
         )
-
-    def handle_step(self) -> None:
-        self.delaunay_solver.step()
 
     def handle_add_triangle(self, triangle: Triangle) -> None:
         triangle = cast(Triangle, tuple(sorted(triangle)))

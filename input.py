@@ -48,7 +48,6 @@ class InputManager:
     ):
         self.nodes = nodes
         self.faces = faces
-        self._face_node_idxs = []
         self.create_face = add_face
         self.selected_nodes: List[int] = []
         self.grab_info: Optional[InputManager.GrabInfo] = None
@@ -82,8 +81,6 @@ class InputManager:
                     self.cancel_grab(self.grab_info)
             elif event.key == pygame.K_g:
                 self.start_grab()
-            elif event.key == pygame.K_e:
-                self.debug_print_faces()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -251,8 +248,3 @@ class InputManager:
                 return
 
         self.create_face(Face(nodes))
-        self._face_node_idxs.append(tuple(self.selected_nodes))
-
-    def debug_print_faces(self) -> None:
-        print([node.position for node in self.nodes])
-        print(self._face_node_idxs)

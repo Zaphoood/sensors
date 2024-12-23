@@ -38,32 +38,12 @@ class DelaunaySolver:
         self,
         points: List[Vector],
         triangles: List[Triangle],
-        add_triangle: Callable[[Triangle], None],
-        remove_triangle: Callable[[int], None],
         verbose: bool = False,
     ) -> None:
         self.points = points
         self.triangles = triangles
-        self.add_triangle = add_triangle
-        self.remove_triangle = remove_triangle
-
         self.adjacent_triangles = get_adjacent_triangles(triangles)
-        # self.edges = list(self.adjacent_triangles.keys())
-
-        # # State of edge flipping algorithm
-        # self.any_flipped = False
-        # self.current_edge = 0
-        # self.done = False
-
         self.verbose = verbose
-
-    def step(self) -> None:
-        # if self.done:
-        #     return
-
-        # if self.adjacent_triangles[self.edges[self.current_edge]]:
-        #     pass
-        return
 
     def solve(self) -> List[Triangle]:
         any_flipped = True
