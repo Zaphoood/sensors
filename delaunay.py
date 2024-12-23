@@ -169,20 +169,3 @@ def get_circumcircle(
         cast(Vector, normal / np.linalg.norm(normal)),
         cast(np.float64, radius),
     )
-
-
-def main():
-    points, triangles = load_triangulation("triangulation.txt")
-    triangles = [cast(Triangle, tuple(sorted(triangle))) for triangle in triangles]
-
-    ds = DelaunaySolver(
-        points,
-        triangles,
-    )
-    delaunay_triangulation = ds.solve()
-    for triangle in delaunay_triangulation:
-        print(" ".join(map(str, triangle)))
-
-
-if __name__ == "__main__":
-    main()
