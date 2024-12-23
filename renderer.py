@@ -63,8 +63,6 @@ class Renderer:
         self._z_buffer.fill(z_buffer_fill)
 
         screen_arr = pygame.surfarray.pixels2d(self.screen)
-        current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
-        current_z_buffer_arr = pygame.surfarray.pixels2d(self._current_z_buffer)
 
         for drawable in self.drawables:
             self._current_buffer.fill(0)
@@ -76,6 +74,8 @@ class Renderer:
                 self.illumination,
             )
 
+            current_buffer_arr = pygame.surfarray.pixels2d(self._current_buffer)
+            current_z_buffer_arr = pygame.surfarray.pixels2d(self._current_z_buffer)
             if bounding_boxes is None:
                 z_buffer_arr = pygame.surfarray.pixels2d(self._z_buffer)
                 visible = current_z_buffer_arr > z_buffer_arr
@@ -114,6 +114,8 @@ class Renderer:
                         (start_x, start_y),
                         special_flags=pygame.BLEND_MAX,
                     )
+            del current_buffer_arr
+            del current_z_buffer_arr
 
         # Unlock `screen` Surface
         del screen_arr

@@ -1,16 +1,18 @@
+from types import NotImplementedType
 from typing import List, Tuple, cast
 
 import numpy as np
 import pygame
 
 from camera import Camera
+from delaunay import DelaunaySolver
 from draw import draw_line3d
 from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Renderer
-from util import PINK, Color, Vector, load_triangulation
+from util import PINK, Color, Triangle, Vector, load_triangulation
 
 
 class CoordinateAxes:
@@ -54,19 +56,60 @@ class App:
         )
 
         points, triangles = load_triangulation("triangulation.txt")
-        self.nodes = [Node(points) for points in points]
+        self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
+        self.triangles = [
+            cast(Triangle, tuple(sorted(triangle))) for triangle in triangles
+        ]
         self.faces = [
             Face((self.nodes[t[0]], self.nodes[t[1]], self.nodes[t[2]]))
-            for t in triangles
+            for t in self.triangles
         ]
         for node in self.nodes:
             self.renderer.register_drawable(node)
         for face in self.faces:
             self.renderer.register_drawable(face)
 
-        self.input_manager = InputManager(
-            self.nodes, self.faces, self.handle_add_face, self.camera
+        self.delaunay_solver = DelaunaySolver(
+            points,
+            self.triangles,
+            self.handle_add_triangle,
+            self.handle_remove_triangle,
         )
+
+        self.input_manager = InputManager(
+            self.nodes, self.faces, self.handle_add_face, self.handle_step, self.camera
+        )
+
+    def handle_step(self) -> None:
+        self.delaunay_solver.step()
+
+    def handle_add_triangle(self, triangle: Triangle) -> None:
+        triangle = cast(Triangle, tuple(sorted(triangle)))
+        if triangle in self.triangles:
+            print(f"WARNGING: refusing to add existing triangle {triangle}")
+            return
+
+        self.triangles.append(triangle)
+        new_face = Face(
+            (
+                self.nodes[triangle[0]],
+                self.nodes[triangle[1]],
+                self.nodes[triangle[2]],
+            )
+        )
+        self.faces.append(new_face)
+        self.renderer.register_drawable(new_face)
+
+    def handle_remove_triangle(self, idx: int) -> None:
+        triangle_to_remove = self.triangles[idx]
+        nodes = set(self.nodes[idx] for idx in triangle_to_remove)
+        for i, face in enumerate(self.faces):
+            if set(face.nodes) == set(nodes):
+                self.renderer.deregister_drawable(face)
+                self.faces.pop(i)
+                break
+
+        self.triangles.pop(idx)
 
     def handle_add_face(self, face: Face) -> None:
         self.faces.append(face)
