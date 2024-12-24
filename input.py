@@ -205,9 +205,9 @@ class InputManager:
         new_view_ray_in_plane = self.camera.position + self.camera.from_camera_coords(
             new_view_ray * grab_info.plane_depth / new_view_ray[2]
         )
-        self.nodes[self.selected_nodes[0]].position = cast(
-            Vector, new_view_ray_in_plane - grab_info.offset
-        )
+        new_position = new_view_ray_in_plane - grab_info.offset
+        new_position /= np.linalg.norm(new_position)
+        self.nodes[self.selected_nodes[0]].position = cast(Vector, new_position)
 
     def handle_pan_mouse_move(
         self, pan_info: PanInfo, new_mouse_pos: Tuple[int, int]
