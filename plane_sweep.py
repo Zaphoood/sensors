@@ -1,9 +1,11 @@
 from typing import List, Optional, cast
 
 import numpy as np
-
 from delaunay import sort_triangle
-from util import Triangle, Vector, load_triangulation, shift
+from util import Triangle, Vector, random_scatter_sphere, shift
+import logging
+
+logging.basicConfig(format="%(message)s", level=logging.DEBUG)
 
 
 def plane_sweep(
@@ -17,10 +19,15 @@ def plane_sweep(
         list(range(len(points))), key=lambda i: sweep_direction.dot(points[i])
     )
     boundary_vertices = points_sorted[:3]
-
     triangulation = [(points_sorted[0], points_sorted[1], points_sorted[2])]
+    logging.info(triangulation[0])
+    for vertex in triangulation[0]:
+        logging.debug(f"{vertex=} {points[vertex]}")
 
     for vertex in points_sorted[3:-1]:
+        logging.info("--- iteration ---")
+        logging.debug(f"{vertex=} {points[vertex]}")
+        logging.debug(f"boundary: {boundary_vertices}")
         # Boundary vertices that are visible from current vertex
         visible_boundary_vertices = np.full((len(boundary_vertices)), True)
 
@@ -28,17 +35,7 @@ def plane_sweep(
         for i in range(len(boundary_vertices)):
             for b0 in range(len(boundary_vertices)):
                 b1 = (b0 + 1) % len(boundary_vertices)
-                point_vertex = points[vertex]
-                point_boundary_vertex = points[boundary_vertices[i]]
-                # TODO: Find out if this hack really works and if so, find a formal justification
-                _weird_hack = point_vertex[1] > 0 or (
-                    np.dot(
-                        [point_vertex[0], point_vertex[2]],
-                        [point_boundary_vertex[0], point_boundary_vertex[2]],
-                    )
-                    > 0
-                )
-                visible_boundary_vertices[i] &= _weird_hack and not do_arcs_intersect(
+                visible_boundary_vertices[i] &= not do_arcs_intersect(
                     points[vertex],
                     points[boundary_vertices[i]],
                     points[boundary_vertices[b0]],
@@ -71,6 +68,7 @@ def plane_sweep(
                 new_triangle = sort_triangle(
                     (vertex, boundary_vertices[current], boundary_vertices[next])
                 )
+                logging.info(new_triangle)
                 triangulation.append(new_triangle)
 
         # Modify boundary to include the current vertex and remove those that are no longer boundary vertices
@@ -162,11 +160,29 @@ def _is_in_arc(v: Vector, a: Vector, b: Vector) -> bool:
     return v.dot(a) > dot_ab and v.dot(b) > dot_ab and v.dot(midpoint) > 0
 
 
-def main():
-    points, _ = load_triangulation("examples/triangulation.txt")
+def _test_with_seed(seed: int, n_points: int) -> None:
+    np.random.seed(seed)
+    points = random_scatter_sphere(n_points)
+    points = [cast(Vector, point * [1, -1, 1]) for point in points]
 
     triangulation = plane_sweep(points)
     print(triangulation)
+
+
+def main():
+    # n_repeat = 10
+    # n_points = 20
+    # for _ in range(n_repeat):
+    #     seed = int(time.time() * 1000) % 2**32
+
+    #     print(f"{seed=}")
+    #     np.random.seed(seed)
+    #     points = random_scatter_sphere(n_points)
+
+    #     triangulation = plane_sweep(points)
+    #     print(triangulation)
+
+    _test_with_seed(4288346723, n_points=20)
 
 
 if __name__ == "__main__":
