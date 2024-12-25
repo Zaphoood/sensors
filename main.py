@@ -1,33 +1,38 @@
 import argparse
 import os
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
 from plane_sweep import plane_sweep
+from coordinate_axes import CoordinateAxes
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 
 from camera import Camera
-from delaunay import get_delaunay, sort_triangle
+from delaunay import get_delaunay
 from face import Face
 from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Renderer
 from util import (
+    BLACK,
     PINK,
     Triangle,
     load_triangulation,
+    random_scatter_sphere,
     save_triangulation,
     sort_triangulation,
 )
 
 
 class App:
-    def __init__(self, screen: pygame.surface.Surface, triangulation_path: str) -> None:
+    def __init__(
+        self, screen: pygame.surface.Surface, triangulation_path: Optional[str]
+    ) -> None:
         self.screen = screen
         screen_dimensions = (screen.get_width(), screen.get_height())
         self.camera = Camera(
@@ -37,12 +42,20 @@ class App:
             focal_length=300,
             sensor_dimensions=screen_dimensions,
         )
-        self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.2)
+        self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.4)
         self.renderer = Renderer(
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        points, triangles = load_triangulation(triangulation_path, do_sort=True)
+        if triangulation_path is not None:
+            points, triangles = load_triangulation(triangulation_path, do_sort=True)
+        else:
+            seed = 4288346723
+            np.random.seed(seed)
+
+            points = random_scatter_sphere(20)
+            triangles = []
+
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
         self.triangles: List[Triangle] = triangles
         self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)
@@ -64,6 +77,9 @@ class App:
                 pygame.K_s: (lambda _: self.triangulate_plane_sweep()),
             },
         )
+
+        self.coordinates = CoordinateAxes(BLACK)
+        self.renderer.register_drawable(self.coordinates)
 
     def run_delaunay(self) -> None:
         delaunay_triangulation = get_delaunay(
@@ -137,13 +153,15 @@ def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Fac
 parser = argparse.ArgumentParser(
     description="Interactive visualization for creating Delaunay triangulations of the sphere"
 )
-parser.add_argument("file", type=str, help="Path to the input triangulation")
+parser.add_argument(
+    "--file", type=str, required=False, help="Path to the input triangulation"
+)
 
 
 def main():
     args = parser.parse_args()
-    if not os.path.isfile(args.file):
-        print(f"Error: The file '{args.file}' does not exist.")
+    if args.file is not None and not os.path.isfile(args.file):
+        print(f"Error: The file '{args.file}' does not exist or is not a file.")
         return
 
     pygame.init()
