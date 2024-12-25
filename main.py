@@ -5,6 +5,8 @@ from typing import List
 
 import numpy as np
 
+from plane_sweep import plane_sweep
+
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 
@@ -34,7 +36,9 @@ class App:
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        points, triangles = load_triangulation(triangulation_path)
+        points, _ = load_triangulation(triangulation_path)
+        triangles = plane_sweep(points)
+        print(f"Plane sweep triangulation: {triangles}")
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
         self.triangles: List[Triangle] = list(map(sort_triangle, triangles))
         self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)

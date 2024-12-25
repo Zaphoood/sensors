@@ -1,8 +1,9 @@
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, cast
 
 import numpy as np
 
-from util import Triangle, Vector, load_triangulation
+from delaunay import sort_triangle
+from util import Triangle, Vector, load_triangulation, shift
 
 
 def plane_sweep(
@@ -18,18 +19,26 @@ def plane_sweep(
     boundary_vertices = points_sorted[:3]
 
     triangulation = [(points_sorted[0], points_sorted[1], points_sorted[2])]
-    print(f"{triangulation=}")
 
-    for vertex in points_sorted[4:]:
-        print("--- Iteration ---")
+    for vertex in points_sorted[3:-1]:
         # Boundary vertices that are visible from current vertex
-        visible_boundary_vertices = np.full((len(points)), True)
+        visible_boundary_vertices = np.full((len(boundary_vertices)), True)
 
         special_case_hidden_edge = None
         for i in range(len(boundary_vertices)):
             for b0 in range(len(boundary_vertices)):
                 b1 = (b0 + 1) % len(boundary_vertices)
-                visible_boundary_vertices[i] &= not do_arcs_intersect(
+                point_vertex = points[vertex]
+                point_boundary_vertex = points[boundary_vertices[i]]
+                # TODO: Find out if this hack really works and if so, find a formal justification
+                _weird_hack = point_vertex[1] > 0 or (
+                    np.dot(
+                        [point_vertex[0], point_vertex[2]],
+                        [point_boundary_vertex[0], point_boundary_vertex[2]],
+                    )
+                    > 0
+                )
+                visible_boundary_vertices[i] &= _weird_hack and not do_arcs_intersect(
                     points[vertex],
                     points[boundary_vertices[i]],
                     points[boundary_vertices[b0]],
@@ -59,9 +68,10 @@ def plane_sweep(
                         ]
                         continue
 
-                triangulation.append(
+                new_triangle = sort_triangle(
                     (vertex, boundary_vertices[current], boundary_vertices[next])
                 )
+                triangulation.append(new_triangle)
 
         # Modify boundary to include the current vertex and remove those that are no longer boundary vertices
         # The latter are vertices which are visible and have visible neighbours.
@@ -76,7 +86,7 @@ def plane_sweep(
         t_start: Optional[int] = None
         t_end: Optional[int] = None
         for current in range(len(visible_boundary_vertices)):
-            next = (current + 1) % len(boundary_vertices)
+            next = (current + 1) % len(visible_boundary_vertices)
             if (
                 not visible_boundary_vertices[current]
                 and visible_boundary_vertices[next]
@@ -89,8 +99,6 @@ def plane_sweep(
                 t_end = current
 
         if t_start is None and t_end is None:
-            print(f"{triangulation=}")
-            print(f"{boundary_vertices=}")
             assert special_case_hidden_edge is not None
             boundary_vertices = [*special_case_hidden_edge, vertex]
         else:
@@ -104,25 +112,34 @@ def plane_sweep(
             else:  # case ii.
                 boundary_vertices = [*boundary_vertices[t_end : t_start + 1], vertex]
 
-        print(f"New boundary vertices: {boundary_vertices}")
+    # Fill in final hole with last vertex
+    for current, next in zip(boundary_vertices, shift(boundary_vertices)):
+        triangulation.append((points_sorted[-1], current, next))
 
     return triangulation
 
 
-def do_arcs_intersect(
-    a: Vector, b: Vector, c: Vector, d: Vector
-) -> Tuple[bool, Vector]:
-    """Check wether the arcs (a, b) and (c, d) on the unit sphere intersect.
+def do_arcs_intersect(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
+    """Check whether the open arcs (a, b) and (c, d) on the unit sphere intersect.
+    Here, 'open' means that if exactly two of the endpoints of two of the arcs coincide, they are treated as not intersecting
 
     It is assumed that all input vectors actually lie on the unit sphere; if they don't, behavior is undefined.
     Neither of the pairs (a, b) and (c, d) must be antipodal.
     """
-    print("--- do_arcs_intersect ---")
     for x, y in [(a, b), (c, d)]:
+        if np.allclose(x, y):
+            raise ValueError(f"Arc endpoints are identical: {x}, {y}")
         if np.allclose(x, -y):
             raise ValueError(
                 f"Cannot determine arc intersection for antipodal vertices: {x}, {y}"
             )
+    a_coincides = np.allclose(a, c) or np.allclose(a, d)
+    b_coincides = np.allclose(b, c) or np.allclose(b, d)
+    if a_coincides and b_coincides:
+        raise ValueError("Line segments must not be identical")
+    if a_coincides or b_coincides:
+        # Endpoint intersection is treated as no intersection
+        return False
 
     # Calculate intersection of the two great circles defined by (a, b) and (c, d)
     norm1 = np.linalg.cross(a, b)
@@ -130,11 +147,9 @@ def do_arcs_intersect(
     inters = cast(Vector, np.linalg.cross(norm1, norm2))
     inters /= np.linalg.norm(inters)
 
-    c1 = _is_in_arc(inters, a, b)
-    c2 = _is_in_arc(inters, c, d)
-    c3 = _is_in_arc(-inters, a, b)
-    c4 = _is_in_arc(-inters, c, d)
-    return (c1 and c2) or (c3 and c4), inters
+    return (_is_in_arc(inters, a, b) and _is_in_arc(inters, c, d)) or (
+        _is_in_arc(-inters, a, b) and _is_in_arc(-inters, c, d)
+    )
 
 
 def _is_in_arc(v: Vector, a: Vector, b: Vector) -> bool:
@@ -143,7 +158,6 @@ def _is_in_arc(v: Vector, a: Vector, b: Vector) -> bool:
     origin"""
     dot_ab = a.dot(b)
     midpoint = (a + b) / 2
-    print(v.dot(a) > dot_ab, v.dot(b) > dot_ab, v.dot(midpoint) > 0)
 
     return v.dot(a) > dot_ab and v.dot(b) > dot_ab and v.dot(midpoint) > 0
 
