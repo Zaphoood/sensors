@@ -17,7 +17,13 @@ from illumination import Illumination, Sun
 from input import InputManager
 from node import Node
 from renderer import Renderer
-from util import PINK, Triangle, load_triangulation, save_triangulation
+from util import (
+    PINK,
+    Triangle,
+    load_triangulation,
+    save_triangulation,
+    sort_triangulation,
+)
 
 
 class App:
@@ -36,11 +42,10 @@ class App:
             self.screen, self.camera, self.illumination, background_color=PINK
         )
 
-        points, _ = load_triangulation(triangulation_path)
-        triangles = plane_sweep(points)
-        print(f"Plane sweep triangulation: {triangles}")
+        points, triangles = load_triangulation(triangulation_path, do_sort=True)
+        # triangles = plane_sweep(points)
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
-        self.triangles: List[Triangle] = list(map(sort_triangle, triangles))
+        self.triangles: List[Triangle] = triangles
         self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)
 
         for node in self.nodes:
@@ -76,7 +81,11 @@ class App:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = f"triangulation_{timestamp}.txt"
 
-        save_triangulation(path, [node.position for node in self.nodes], self.triangles)
+        save_triangulation(
+            path,
+            [node.position for node in self.nodes],
+            sort_triangulation(self.triangles),
+        )
         print(f"Saved current triangulation to '{path}'")
 
     def handle_add_face(self, face: Face) -> None:

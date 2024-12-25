@@ -91,8 +91,12 @@ def get_bounding_box_2d(points: npt.NDArray) -> BoundingBox:
 
 
 def save_triangulation(
-    path: str, points: List[Vector], triangles: List[Triangle]
+    path: str,
+    points: List[Vector],
+    triangles: List[Triangle],
 ) -> None:
+    """Save a set of points and its triangulation to a file."""
+
     with open(path, "w") as file:
         for point in points:
             file.write(" ".join(str(el) for el in point) + "\n")
@@ -101,7 +105,9 @@ def save_triangulation(
             file.write(" ".join(str(el) for el in triangle) + "\n")
 
 
-def load_triangulation(path: str) -> Tuple[List[Vector], List[Triangle]]:
+def load_triangulation(
+    path: str, do_sort: bool = False
+) -> Tuple[List[Vector], List[Triangle]]:
     reading_points = True
     points: List[Vector] = []
     triangles: List[Tuple[int, int, int]] = []
@@ -125,7 +131,25 @@ def load_triangulation(path: str) -> Tuple[List[Vector], List[Triangle]]:
                     raise ValueError(f"Triangle must be of length 3 but got: '{line}'")
                 triangles.append(triangle)
 
-    return points, triangles
+    triangles_out = sort_triangulation(triangles) if do_sort else triangles
+
+    return points, triangles_out
+
+
+def sort_triangulation(triangulation: List[Triangle]) -> List[Triangle]:
+    """Sort each triangle individually and then the entire triangulation lexicographically"""
+    return sorted(map(sort_triangle, triangulation))
+
+
+def sort_edge(edge: Tuple[int, int]) -> Tuple[int, int]:
+    if edge[0] > edge[1]:
+        return (edge[1], edge[0])
+    else:
+        return edge
+
+
+def sort_triangle(triangle: Triangle) -> Triangle:
+    return cast(Triangle, tuple(sorted(triangle)))
 
 
 def random_scatter_sphere(n: int) -> List[Vector]:

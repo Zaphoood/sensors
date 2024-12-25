@@ -3,18 +3,7 @@ from typing import Dict, List, Optional, Set, Tuple, cast
 
 import numpy as np
 
-from util import Triangle, Vector, load_triangulation
-
-
-def sort_edge(edge: Tuple[int, int]) -> Tuple[int, int]:
-    if edge[0] > edge[1]:
-        return (edge[1], edge[0])
-    else:
-        return edge
-
-
-def sort_triangle(triangle: Triangle) -> Triangle:
-    return cast(Triangle, tuple(sorted(triangle)))
+from util import Triangle, Vector, sort_edge, sort_triangle
 
 
 def get_adjacent_triangles(

@@ -5,7 +5,7 @@ import pygame
 
 from illumination import Illumination
 from renderer import Drawable, distance_to_z_buffer
-from util import BoundingBox, Vector, BLACK
+from util import WHITE, BoundingBox, Vector, BLACK
 from camera import Camera
 
 NODE_SIZE_PX = 16
