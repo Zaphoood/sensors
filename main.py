@@ -61,6 +61,7 @@ class App:
             key_callbacks={
                 pygame.K_SPACE: (lambda _: self.run_delaunay()),
                 pygame.K_e: (lambda _: self.export_triangulation()),
+                pygame.K_x: (lambda _: self.delete_all_triangles()),
             },
         )
 
@@ -76,6 +77,12 @@ class App:
         self.faces = triangles_to_faces(self.nodes, self.triangles)
         for face in self.faces:
             self.renderer.register_drawable(face)
+
+    def delete_all_triangles(self) -> None:
+        for face in self.faces:
+            self.renderer.deregister_drawable(face)
+        self.faces = []
+        self.triangles = []
 
     def export_triangulation(self) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
