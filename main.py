@@ -43,7 +43,6 @@ class App:
         )
 
         points, triangles = load_triangulation(triangulation_path, do_sort=True)
-        # triangles = plane_sweep(points)
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
         self.triangles: List[Triangle] = triangles
         self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)
@@ -62,6 +61,7 @@ class App:
                 pygame.K_SPACE: (lambda _: self.run_delaunay()),
                 pygame.K_e: (lambda _: self.export_triangulation()),
                 pygame.K_x: (lambda _: self.delete_all_triangles()),
+                pygame.K_s: (lambda _: self.triangulate_plane_sweep()),
             },
         )
 
@@ -83,6 +83,25 @@ class App:
             self.renderer.deregister_drawable(face)
         self.faces = []
         self.triangles = []
+
+    def triangulate_plane_sweep(self) -> None:
+        if len(self.triangles) > 0:
+            print(
+                "Refusing to run plane sweep since there are already triangles. Press 'x' to delete all triangles"
+            )
+            return
+
+        if len(self.faces) > 0:
+            print(
+                "WARNING: List of triangles was empty but there were still Faces, deleting them now"
+            )
+            for face in self.faces:
+                self.renderer.deregister_drawable(face)
+
+        self.triangles = plane_sweep([node.position for node in self.nodes])
+        self.faces = triangles_to_faces(self.nodes, self.triangles)
+        for face in self.faces:
+            self.renderer.register_drawable(face)
 
     def export_triangulation(self) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
