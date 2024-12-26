@@ -23,10 +23,8 @@ def plane_sweep(
 
 
 def _plane_sweep_hemisphere(
-    points: List[Vector], sweep_direction: Optional[Vector]
+    points: List[Vector], sweep_direction: Vector
 ) -> Tuple[List[Triangle], List[int]]:
-    sweep_direction = np.array([0, -1, 0], dtype=np.float64)
-
     # Sort-permutation of `points` by sweep direction.
     points_sorted = sorted(
         list(range(len(points))), key=lambda i: sweep_direction.dot(points[i])
