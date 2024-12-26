@@ -42,45 +42,48 @@ def _plane_sweep_hemisphere(
         if sweep_direction.dot(points[vertex]) > 0:
             logging.info("crossed equator, stop.")
             break
-        # Edges of the boundary that are visible from current vertex.
-        # Entry i corresponds to edge (boundary_vertices[i], boundary_vertices[(i + 1) % len(boundary_vertices)])
-        visible_boundary_edges = np.full((len(boundary_vertices)), True)
 
-        for i, (current_idx, next_idx) in enumerate(
+        visible_vertices = np.full((len(boundary_vertices)), True)
+        visible_midpoints = np.full((len(boundary_vertices)), True)
+        for i, (current, next) in enumerate(
             zip(boundary_vertices, shift(boundary_vertices))
         ):
-            midpoint = (points[current_idx] + points[next_idx]) / 2
+            midpoint = (points[current] + points[next]) / 2
             midpoint /= np.linalg.norm(midpoint)
+
             for b0, b1 in zip(boundary_vertices, shift(boundary_vertices)):
-                if (current_idx, next_idx) == (b0, b1):
-                    continue
-                visible_boundary_edges[i] &= not (
-                    do_arcs_intersect(
-                        points[vertex],
-                        points[current_idx],
-                        points[b0],
-                        points[b1],
-                    )
-                    or do_arcs_intersect(
-                        points[vertex],
-                        cast(Vector, midpoint),
-                        points[b0],
-                        points[b1],
-                    )
-                    or do_arcs_intersect(
-                        points[vertex],
-                        points[next_idx],
-                        points[b0],
-                        points[b1],
-                    )
+                visible_vertices[i] &= (
+                    (current == b0) or (current == b1)
+                ) or not do_arcs_intersect(
+                    points[vertex],
+                    points[current],
+                    points[b0],
+                    points[b1],
+                )
+                visible_midpoints[i] &= (
+                    (current, next) == (b0, b1)
+                ) or not do_arcs_intersect(
+                    points[vertex],
+                    cast(Vector, midpoint),
+                    points[b0],
+                    points[b1],
                 )
 
+        logging.debug(f"{visible_vertices=}")
+        logging.debug(f"{visible_midpoints=}")
+        # Edges of the boundary that are visible from current vertex.
+        # Entry i corresponds to edge (boundary_vertices[i], boundary_vertices[(i + 1) % len(boundary_vertices)])
+        visible_boundary_edges = (
+            visible_vertices
+            & visible_midpoints
+            & np.hstack([visible_vertices[1:], visible_vertices[:1]])
+        )
         logging.debug(f"{visible_boundary_edges=}")
-        for i, (current_idx, next_idx) in enumerate(
+        for i, (current, next) in enumerate(
             zip(boundary_vertices, shift(boundary_vertices))
         ):
             if visible_boundary_edges[i]:
-                new_triangle = sort_triangle((vertex, current_idx, next_idx))
+                new_triangle = sort_triangle((vertex, current, next))
                 logging.info(new_triangle)
                 triangulation.append(new_triangle)
 
@@ -98,18 +101,12 @@ def _plane_sweep_hemisphere(
         # indices after `t_start` and before `t_end`
         t_start: Optional[int] = None
         t_end: Optional[int] = None
-        for current_idx in range(len(visible_boundary_edges)):
-            next_idx = (current_idx + 1) % len(visible_boundary_edges)
-            if (
-                not visible_boundary_edges[current_idx]
-                and visible_boundary_edges[next_idx]
-            ):
-                t_start = next_idx
-            if (
-                visible_boundary_edges[current_idx]
-                and not visible_boundary_edges[next_idx]
-            ):
-                t_end = next_idx
+        for current in range(len(visible_boundary_edges)):
+            next = (current + 1) % len(visible_boundary_edges)
+            if not visible_boundary_edges[current] and visible_boundary_edges[next]:
+                t_start = next
+            if visible_boundary_edges[current] and not visible_boundary_edges[next]:
+                t_end = next
 
         if t_start is None and t_end is None:
             raise RuntimeError("All vertices visible or all invisible :(")  # )
@@ -208,24 +205,25 @@ def _stich_hemispheres(
 
 def do_arcs_intersect(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
     """Check whether the open arcs (a, b) and (c, d) on the unit sphere intersect.
-    Here, 'open' means that if exactly two of the endpoints of two of the arcs coincide, they are treated as not intersecting
 
-    It is assumed that all input vectors actually lie on the unit sphere; if they don't, behavior is undefined.
-    Neither of the pairs (a, b) and (c, d) must be antipodal.
+    Here, 'open' means that if two of the endpoints of two of the arcs
+    coincide, they are treated as not intersecting. The case `(a, b) == (c, d)`
+    is not allowed and will result in a exception. It is assumed that all input
+    vectors actually lie on the unit sphere; if they don't, behavior is
+    undefined. Neither of the pairs arcs must have antipodal endpoints, i. e.
+    `a != -b and c != -d` must hold.
     """
     for x, y in [(a, b), (c, d)]:
         if np.allclose(x, y):
             raise ValueError(f"Arc endpoints are identical: {x}, {y}")
         if np.allclose(x, -y):
-            raise ValueError(
-                f"Cannot determine arc intersection for antipodal vertices: {x}, {y}"
-            )
+            raise ValueError(f"Arc endpoints are antipodal: {x}, {y}")
     a_coincides = np.allclose(a, c) or np.allclose(a, d)
     b_coincides = np.allclose(b, c) or np.allclose(b, d)
     if a_coincides and b_coincides:
-        raise ValueError("Line segments must not be identical")
+        raise ValueError("Line segments must not be identical nor degenerate")
     if a_coincides or b_coincides:
-        # Endpoint intersection is treated as no intersection
+        # Endpoint intersection is treated as non-intersection
         return False
 
     # Calculate intersection of the two great circles defined by (a, b) and (c, d)
@@ -241,8 +239,7 @@ def do_arcs_intersect(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
 
 def _is_in_arc(v: Vector, a: Vector, b: Vector) -> bool:
     """Check if `v` is contained in the arc from `a` to `b`. It is assumed that
-    all points lie on the same circle of radius 1 with its center at the
-    origin"""
+    all points have norm 1 and lie on the same great circle."""
     dot_ab = a.dot(b)
     midpoint = (a + b) / 2
 
@@ -273,7 +270,10 @@ def test_many(n_repeat: int, n_points: int) -> None:
 
 
 def main():
-    # test_seed(int(time.time()), n_points=20)
+    # seed = 1735214894
+    # seed = int(time.time())
+    # test_seed(seed, n_points=20)
+
     test_many(100, 20)
 
 
