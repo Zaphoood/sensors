@@ -50,10 +50,11 @@ class App:
         if triangulation_path is not None:
             points, triangles = load_triangulation(triangulation_path, do_sort=True)
         else:
-            seed = 4288346723
-            np.random.seed(seed)
-
-            points = random_scatter_sphere(20)
+            n_points = 20
+            print(
+                f"No input triangulation provided, picking random sample of {n_points} points"
+            )
+            points = random_scatter_sphere(n_points)
             triangles = []
 
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
