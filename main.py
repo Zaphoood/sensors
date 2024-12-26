@@ -5,6 +5,7 @@ from typing import List, Optional
 
 import numpy as np
 
+from miniball import get_max_enclosing_radius
 from plane_sweep import plane_sweep
 from coordinate_axes import CoordinateAxes
 
@@ -76,6 +77,7 @@ class App:
                 pygame.K_e: (lambda _: self.export_triangulation()),
                 pygame.K_x: (lambda _: self.delete_all_triangles()),
                 pygame.K_s: (lambda _: self.triangulate_plane_sweep()),
+                pygame.K_m: (lambda _: self.miniball()),
             },
         )
 
@@ -119,6 +121,15 @@ class App:
         self.faces = triangles_to_faces(self.nodes, self.triangles)
         for face in self.faces:
             self.renderer.register_drawable(face)
+
+    def miniball(self) -> None:
+        if len(self.triangles) == 0:
+            print("No triangulation")
+            return
+        print(
+            f"Largest min-radius of current triangulation: "
+            f"{get_max_enclosing_radius([node.position for node in self.nodes], self.triangles)}"
+        )
 
     def export_triangulation(self) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
