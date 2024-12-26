@@ -7,8 +7,6 @@ import numpy as np
 from delaunay import sort_triangle
 from util import Triangle, Vector, random_scatter_sphere, shift
 
-logging.basicConfig(format="%(message)s", level=logging.WARN)
-
 
 def plane_sweep(
     points: List[Vector], sweep_direction: Optional[Vector] = None

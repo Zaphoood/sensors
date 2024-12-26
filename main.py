@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from datetime import datetime
 from typing import List, Optional
@@ -55,6 +56,8 @@ class App:
             print(
                 f"No input triangulation provided, picking random sample of {n_points} points"
             )
+            seed = 60291741
+            np.random.seed(seed)
             points = random_scatter_sphere(n_points)
             triangles = []
 
@@ -171,6 +174,8 @@ parser.add_argument(
 
 
 def main():
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
+
     args = parser.parse_args()
     if args.file is not None and not os.path.isfile(args.file):
         print(f"Error: The file '{args.file}' does not exist or is not a file.")

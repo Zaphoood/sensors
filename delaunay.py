@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple, cast
+import logging
 
 import numpy as np
 
@@ -22,14 +23,12 @@ def get_adjacent_triangles(
     return adjacent_triangles
 
 
-def get_delaunay(
-    points: List[Vector], triangles: List[Triangle], verbose: bool = False
-) -> List[Triangle]:
+def get_delaunay(points: List[Vector], triangles: List[Triangle]) -> List[Triangle]:
     adjacent_triangles = get_adjacent_triangles(triangles)
     any_flipped = True
+
     while any_flipped:
-        if verbose:
-            print("--- Iteration ---")
+        logging.info("--- iteration ---")
         any_flipped = False
         edges = list(adjacent_triangles.keys())
         for edge in edges:
@@ -37,8 +36,8 @@ def get_delaunay(
             if len(adjacent_vertices) != 2:
                 continue
 
-            if should_flip(points, edge, adjacent_vertices, verbose):
-                flip_edge(adjacent_triangles, edge, verbose)
+            if should_flip(points, edge, adjacent_vertices):
+                flip_edge(adjacent_triangles, edge)
                 any_flipped = True
 
     new_triangulation: Set[Triangle] = set()
@@ -53,13 +52,11 @@ def should_flip(
     points: List[Vector],
     edge: Tuple[int, int],
     adjacent: Tuple[int, int],
-    verbose: bool = False,
 ) -> bool:
     """Return True if the `edge` with adjacent triangles `(edge[0], edge[1], adjacent[0])`
     and `(edge[0], edge[1], adjacent[1])` is *not* locally delaunay, by checking whether w lies in the circumcircle
     of xyz"""
-    if verbose:
-        print(f"Checking edge {edge} for flipping")
+    logging.debug(f"Checking edge {edge} for flipping")
 
     x = points[edge[0]]
     y = points[edge[1]]
@@ -74,11 +71,9 @@ def should_flip(
     geodesic_radius = np.arcsin(radius)
     epicenter = cast(Vector, center / np.linalg.norm(center))
     geodesic_dist_w = geodesic_distance(epicenter, w)
-    if verbose:
-        print(f"Center {center}, radius {radius:.3f}")
-        print(f"Epicenter {epicenter}, geodesic radius {geodesic_radius:.3f})")
-    if verbose:
-        print(f"Geodesic distance of w from center: {geodesic_dist_w}")
+    logging.debug(f"Center {center}, radius {radius:.3f}")
+    logging.debug(f"Epicenter {epicenter}, geodesic radius {geodesic_radius:.3f})")
+    logging.debug(f"Geodesic distance of w from center: {geodesic_dist_w}")
 
     return geodesic_dist_w < geodesic_radius
 
@@ -86,18 +81,17 @@ def should_flip(
 def flip_edge(
     adjacent_triangles: Dict[Tuple[int, int], List[int]],
     edge: Tuple[int, int],
-    verbose: bool = False,
 ) -> None:
     adjacent = tuple(adjacent_triangles[edge])
     assert len(adjacent) == 2
-    if verbose:
-        print(f"Flipping {edge} => {adjacent}")
+    logging.info(f"Flipping {edge} => {adjacent}")
     adjacent_triangles.pop(edge)
     adjacent_triangles[sort_edge(adjacent)] = list(edge)
 
     a, b = edge
     c, d = adjacent
 
+    # TODO: fix this
     ac = sort_edge((a, c))
     adjacent_triangles[ac].remove(b)
     adjacent_triangles[ac].append(d)
