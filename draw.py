@@ -190,7 +190,7 @@ def get_3d_arc_points(
     angle = np.arccos(np.dot(a, b))
 
     if n_points == "adaptive":
-        n_points = int(angle / np.pi * 12)
+        n_points = max(1, int(angle / np.pi * 12))
     angles = np.linspace(0, angle, n_points + 1)
     starts = (
         np.cos(angles[:-1, np.newaxis]) * a + np.sin(angles[:-1, np.newaxis]) * a_orth
