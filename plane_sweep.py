@@ -1,11 +1,10 @@
 import logging
-import time
 from typing import List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
 
 from geometry import do_arcs_intersect
-from util import Triangle, Vector, random_scatter_sphere, shift, sort_triangle
+from util import Triangle, Vector, shift, sort_triangle
 
 
 def plane_sweep(
@@ -15,12 +14,9 @@ def plane_sweep(
         sweep_direction = np.array([0, -1, 0], dtype=np.float64)
     triang_north, boundary_north = _plane_sweep_hemisphere(points, sweep_direction)
     triang_south, boundary_south = _plane_sweep_hemisphere(points, -sweep_direction)
-    print(f"{boundary_north=}")
-    print(f"{boundary_south=}")
-    triang_equator = _stich_hemispheres(points, boundary_north, boundary_south)
+    triang_equator = _stitch_hemispheres(points, boundary_north, boundary_south)
 
-    # return [*triang_north, *triang_south, *triang_equator]
-    return [*triang_north, *triang_south]
+    return [*triang_north, *triang_south, *triang_equator]
 
 
 def _plane_sweep_hemisphere(
@@ -125,7 +121,7 @@ def _plane_sweep_hemisphere(
     return triangulation, boundary_vertices
 
 
-def _stich_hemispheres(
+def _stitch_hemispheres(
     points: List[Vector], boundary_north: List[int], boundary_south: List[int]
 ) -> List[Triangle]:
     logging.info("--- _stich_hemispheres ---")
@@ -147,94 +143,91 @@ def _stich_hemispheres(
     )
 
     triangulation: List[Triangle] = []
-    p_south = 0
-    p_north = 0
+    north_pole = np.array([0, 1, 0])
+    south_pole = np.array([0, -1, 0])
+    # Pointers to current vertex on south and north boundary
+    ps = 0
+    pn = 0
     # Store the side on which the first closed loop was formed
     first_closed: Optional[Union[Literal["north"], Literal["south"]]] = None
     while True:
-        while north_cw[p_north][1] <= south_cw[p_south][1]:
-            new_triangle = (
-                north_cw[p_north][0],
-                north_cw[(p_north + 1) % n_north][0],
-                south_cw[p_south][0],
-            )
+        while True:
+            ps_next = (ps + 1) % n_south
+            pn_next = (pn + 1) % n_north
+            n = north_cw[pn][0]
+            n_next = north_cw[pn_next][0]
+            s = south_cw[ps][0]
+            s_next = south_cw[ps_next][0]
+            if (
+                north_cw[pn_next][1] - south_cw[ps][1] > np.pi
+                or do_arcs_intersect(
+                    points[s], points[n_next], points[s_next], south_pole
+                )
+                or do_arcs_intersect(points[s], points[n_next], points[n], north_pole)
+            ):
+                break
+            new_triangle = (n, n_next, s)
             logging.info(new_triangle)
             triangulation.append(new_triangle)
-            p_north += 1
-            if p_north == n_north:
+            pn += 1
+            if pn == n_north:
                 first_closed = "north"
                 break
         if first_closed is not None:
             break
-        while south_cw[p_south][1] <= north_cw[p_north][1]:
-            new_triangle = (
-                south_cw[p_south][0],
-                south_cw[(p_south + 1) % n_south][0],
-                north_cw[p_north][0],
-            )
+
+        while True:
+            ps_next = (ps + 1) % n_south
+            pn_next = (pn + 1) % n_north
+            n = north_cw[pn][0]
+            n_next = north_cw[pn_next][0]
+            s = south_cw[ps][0]
+            s_next = south_cw[ps_next][0]
+            if (
+                south_cw[ps_next][1] - north_cw[pn][1] > np.pi
+                or do_arcs_intersect(
+                    points[n],
+                    points[s_next],
+                    points[n_next],
+                    north_pole,
+                )
+                or do_arcs_intersect(
+                    points[n],
+                    points[s_next],
+                    points[s],
+                    south_pole,
+                )
+            ):
+                break
+            new_triangle = (s, s_next, n)
             logging.info(new_triangle)
             triangulation.append(new_triangle)
-            p_south += 1
-            if p_south == n_south:
+            ps += 1
+            if ps == n_south:
                 first_closed = "south"
                 break
         if first_closed is not None:
             break
 
     if first_closed == "north":
-        while p_south < n_south:
+        while ps < n_south:
             new_triangle = (
-                south_cw[p_south][0],
-                south_cw[(p_south + 1) % n_south][0],
+                south_cw[ps][0],
+                south_cw[(ps + 1) % n_south][0],
                 north_cw[0][0],
             )
             logging.info(new_triangle)
             triangulation.append(new_triangle)
-            p_south += 1
+            ps += 1
     else:
-        while p_north < n_north:
+        while pn < n_north:
             new_triangle = (
-                north_cw[p_north][0],
-                north_cw[(p_north + 1) % n_north][0],
+                north_cw[pn][0],
+                north_cw[(pn + 1) % n_north][0],
                 south_cw[0][0],
             )
             logging.info(new_triangle)
             triangulation.append(new_triangle)
-            p_north += 1
+            pn += 1
 
     return triangulation
-
-
-def test_seed(seed: int, n_points: int) -> None:
-    print(f"{seed = }")
-    np.random.seed(seed)
-    points = random_scatter_sphere(n_points)
-
-    triangulation = plane_sweep(points)
-    print(triangulation)
-
-
-def test_many(n_repeat: int, n_points: int) -> None:
-    for i in range(n_repeat):
-        print(i, end="\r")
-        seed = int(time.time() * 1000) % 2**32
-        np.random.seed(seed)
-        points = random_scatter_sphere(n_points)
-
-        try:
-            plane_sweep(points)
-        except AssertionError:
-            print(seed)
-            break
-
-
-def main():
-    # seed = 1735214894
-    # seed = int(time.time())
-    # test_seed(seed, n_points=20)
-
-    test_many(100, 20)
-
-
-if __name__ == "__main__":
-    main()
