@@ -7,7 +7,7 @@ import pygame
 
 from face import Face
 from node import Node
-from util import Vector, closest_point_on_ray
+from util import Triangle, Vector, closest_point_on_ray
 from camera import Camera
 
 NODE_HITBOX = 0.3
@@ -43,14 +43,14 @@ class InputManager:
         self,
         nodes: List[Node],
         faces: List[Face],
-        add_face: Callable[[Face], None],
+        add_triangle: Callable[[Triangle], None],
         camera: Camera,
         # Map pygame key codes to callback functions
         key_callbacks: Dict[int, Callable[[pygame.event.Event], None]] = {},
     ):
         self.nodes = nodes
         self.faces = faces
-        self.create_face = add_face
+        self.add_triangle = add_triangle
         self.selected_nodes: List[int] = []
         self.grab_info: Optional[InputManager.GrabInfo] = None
 
@@ -67,7 +67,7 @@ class InputManager:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_f:
-                self.fill_face()
+                self.fill_triangle()
             elif event.key == pygame.K_r:
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
                     self.camera.position = np.array([0.0, 0.0, -1.0])
@@ -243,16 +243,8 @@ class InputManager:
         offset = self.camera_move_step * np.array([0, 0, direction])
         self.camera.pan(cast(Vector, offset))
 
-    def fill_face(self) -> None:
+    def fill_triangle(self) -> None:
         if len(self.selected_nodes) != 3:
             return
-        nodes = cast(
-            Tuple[Node, Node, Node],
-            tuple(self.nodes[node] for node in self.selected_nodes),
-        )
-
-        for face in self.faces:
-            if set(face.nodes) == set(nodes):
-                return
-
-        self.create_face(Face(nodes))
+        nodes = cast(Triangle, tuple(self.selected_nodes))
+        self.add_triangle(nodes)

@@ -27,6 +27,7 @@ from util import (
     load_triangulation,
     random_scatter_sphere,
     save_triangulation,
+    sort_triangle,
     sort_triangulation,
 )
 
@@ -73,7 +74,7 @@ class App:
         self.input_manager = InputManager(
             self.nodes,
             self.faces,
-            self.handle_add_face,
+            self.handle_add_triangle,
             self.camera,
             key_callbacks={
                 pygame.K_SPACE: (lambda _: self.run_delaunay()),
@@ -145,7 +146,13 @@ class App:
         )
         print(f"Saved current triangulation to '{path}'")
 
-    def handle_add_face(self, face: Face) -> None:
+    def handle_add_triangle(self, triangle: Triangle) -> None:
+        triangle = sort_triangle(triangle)
+        if triangle in self.triangles:
+            print(f"WARNING: Refusing to add existing triangle {triangle}")
+            return
+        self.triangles.append(triangle)
+        face = triangle_to_face(self.nodes, triangle)
         self.faces.append(face)
         self.renderer.register_drawable(face)
 
@@ -163,6 +170,10 @@ class App:
 
 def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Face]:
     return [Face((nodes[t[0]], nodes[t[1]], nodes[t[2]])) for t in triangles]
+
+
+def triangle_to_face(nodes: List[Node], triangle: Triangle) -> Face:
+    return Face((nodes[triangle[0]], nodes[triangle[1]], nodes[triangle[2]]))
 
 
 parser = argparse.ArgumentParser(
