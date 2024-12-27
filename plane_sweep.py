@@ -159,7 +159,11 @@ def _stitch_hemispheres(
             s = south_cw[ps][0]
             s_next = south_cw[ps_next][0]
             if (
-                north_cw[pn_next][1] - south_cw[ps][1] > np.pi
+                (
+                    north_cw[pn][1] > south_cw[ps][1]
+                    and clockwise_distance(south_cw[ps][1], north_cw[pn_next][1])
+                    > np.pi
+                )
                 or do_arcs_intersect(
                     points[s], points[n_next], points[s_next], south_pole
                 )
@@ -184,7 +188,11 @@ def _stitch_hemispheres(
             s = south_cw[ps][0]
             s_next = south_cw[ps_next][0]
             if (
-                south_cw[ps_next][1] - north_cw[pn][1] > np.pi
+                (
+                    south_cw[ps][1] > north_cw[pn][1]
+                    and clockwise_distance(north_cw[pn][1], south_cw[ps_next][1])
+                    > np.pi
+                )
                 or do_arcs_intersect(
                     points[n],
                     points[s_next],
@@ -231,3 +239,10 @@ def _stitch_hemispheres(
             pn += 1
 
     return triangulation
+
+
+def clockwise_distance(first: float, second: float) -> float:
+    if second >= first:
+        return second - first
+    else:
+        return 2 * np.pi - (first - second)
