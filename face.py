@@ -1,14 +1,16 @@
-from typing import Optional, Sequence, Tuple
+from typing import Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pygame
 
 from camera import Camera
+from draw import draw_arc3d_z, draw_line3d_z, draw_triangle3d_z
 from illumination import Illumination
-from draw import draw_line3d_z, draw_triangle3d_z
 from node import Node
 from renderer import Drawable
-from util import BLACK, GREEN, WHITE, BoundingBox, Color, Vector
+from util import BLACK, GREEN, WHITE, BoundingBox, Color, Vector, shift
+
+DrawMode = Union[Literal["triangle"], Literal["arcs"]]
 
 
 class Face(Drawable):
@@ -20,10 +22,12 @@ class Face(Drawable):
             Node,
         ],
         edge_color: Color = BLACK,
+        draw_mode: DrawMode = "arcs",
         draw_normals: bool = False,
     ) -> None:
         self.nodes = nodes
         self.edge_color = edge_color
+        self.draw_mode: DrawMode = draw_mode
         self.draw_normals = draw_normals
 
     def get_normal_to_camera(self, camera: Camera) -> Vector:
@@ -35,6 +39,22 @@ class Face(Drawable):
         return normal
 
     def draw(
+        self,
+        buffer: pygame.surface.Surface,
+        z_buffer: pygame.surface.Surface,
+        camera: Camera,
+        illumination: Illumination,
+    ) -> Optional[Sequence[BoundingBox]]:
+        if self.draw_mode == "triangle":
+            self._draw_triangle(buffer, z_buffer, camera, illumination)
+        elif self.draw_mode == "arcs":
+            self._draw_arcs(buffer, z_buffer, camera)
+        else:
+            raise ValueError(
+                f"Exhaustive check of draw mode in {self.__class__.__name__}.draw(): '{self.draw_mode}'"
+            )
+
+    def _draw_triangle(
         self,
         buffer: pygame.surface.Surface,
         z_buffer: pygame.surface.Surface,
@@ -59,3 +79,23 @@ class Face(Drawable):
             )
 
         return bounding_box and [bounding_box]
+
+    def _draw_arcs(
+        self,
+        buffer: pygame.surface.Surface,
+        z_buffer: pygame.surface.Surface,
+        camera: Camera,
+    ) -> Optional[Sequence[BoundingBox]]:
+        bounding_boxes = []
+        for node1, node2 in zip(self.nodes, shift(self.nodes)):
+            new_bounding_boxes = draw_arc3d_z(
+                buffer,
+                z_buffer,
+                camera,
+                self.edge_color,
+                node1.position,
+                node2.position,
+            )
+            bounding_boxes.extend(new_bounding_boxes)
+
+        return bounding_boxes

@@ -49,13 +49,24 @@ class Renderer:
         with suppress(ValueError):
             self.drawables.remove(drawable)
 
-    def render(self, show_fps: bool = False) -> None:
+    def render(self, show_fps: bool = False, ignore_depth: bool = False) -> None:
         second = int(time.time())
         if second != self.current_second:
             self.frames_last_second = self.frames_this_second
             self.frames_this_second = 0
             self.current_second = second
         self.frames_this_second += 1
+
+        if ignore_depth:
+            self._render_flat()
+        else:
+            self._render_z()
+
+        if show_fps:
+            self.draw_fps()
+
+    def _render_z(self) -> None:
+        """Render with correct overlapping"""
 
         z_buffer_fill = distance_to_z_buffer(float("inf"))
 
@@ -128,8 +139,16 @@ class Renderer:
         # Unlock `screen` Surface
         del screen_arr
 
-        if show_fps:
-            self.draw_fps()
+    def _render_flat(self) -> None:
+        """Render while ignoring overlapping"""
+        self.screen.fill(self.background_color)
+        for drawable in self.drawables:
+            drawable.draw(
+                self.screen,
+                self._current_z_buffer,  # Values here will be ignored
+                self.camera,
+                self.illumination,
+            )
 
     def draw_fps(self) -> None:
         self.screen.blit(

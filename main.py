@@ -158,7 +158,7 @@ class App:
         return True
 
     def draw(self) -> None:
-        self.renderer.render(show_fps=True)
+        self.renderer.render(show_fps=True, ignore_depth=True)
 
 
 def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Face]:

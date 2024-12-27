@@ -1,11 +1,12 @@
 from typing import List, Optional, Sequence, Tuple, Union, cast
+
 import numpy as np
 import numpy.typing as npt
 import pygame
 
-from renderer import distance_to_z_buffer
-from util import BoundingBox, Vector, Color, get_bounding_box_2d
 from camera import Camera
+from renderer import distance_to_z_buffer
+from util import BoundingBox, Color, Vector, get_bounding_box_2d
 
 
 def draw_line3d(
@@ -154,4 +155,41 @@ def get_3d_circle_points(
     ends = center + radius * (
         np.cos(angles[1:, np.newaxis]) * orth1 + np.sin(angles[1:, np.newaxis]) * orth2
     )
+    return cast(npt.NDArray[np.float64], starts), cast(npt.NDArray[np.float64], ends)
+
+
+def draw_arc3d_z(
+    buffer: pygame.Surface,
+    z_buffer: pygame.Surface,
+    camera: Camera,
+    color: Color,
+    a: Vector,
+    b: Vector,
+    n_steps: int = 10,
+    width: int = 1,
+) -> List[BoundingBox]:
+    starts, ends = get_3d_arc_points(a, b, n_steps)
+    bounding_boxes: List[BoundingBox] = []
+    for start, end in zip(starts, ends):
+        bounding_box = draw_line3d_z(buffer, z_buffer, camera, color, start, end, width)
+        bounding_boxes.append(bounding_box)
+
+    return bounding_boxes
+
+
+def get_3d_arc_points(
+    a: Vector, b: Vector, n_steps: int
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    normal = np.linalg.cross(a, b)
+    a_orth = np.linalg.cross(normal, a)
+    a_orth /= np.linalg.norm(a_orth)
+
+    angle = np.arccos(np.dot(a, b))
+
+    angles = np.linspace(0, angle, n_steps + 1)
+    starts = (
+        np.cos(angles[:-1, np.newaxis]) * a + np.sin(angles[:-1, np.newaxis]) * a_orth
+    )
+    ends = np.cos(angles[1:, np.newaxis]) * a + np.sin(angles[1:, np.newaxis]) * a_orth
+
     return starts, ends
