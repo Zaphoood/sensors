@@ -5,7 +5,6 @@ from typing import Dict, List, Set, Tuple, cast
 import numpy as np
 
 from geometry import geodesic_distance, get_circumcircle
-from plane_sweep import do_arcs_intersect
 from util import Triangle, Vector, sort_edge, sort_triangle
 
 

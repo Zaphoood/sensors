@@ -1,4 +1,4 @@
-from typing import List, Sequence, Tuple, TypeVar, Union, cast
+from typing import List, Sequence, Set, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -164,3 +164,17 @@ def random_scatter_sphere(n: int) -> List[Vector]:
         points.append(cast(Vector, point / norm))
 
     return points
+
+
+def get_edges(
+    triangles: List[Triangle],
+) -> List[Tuple[int, int]]:
+    # For each edge, store the vertices with which a triangle is formed
+    edges: Set[Tuple[int, int]] = set()
+
+    for triangle in triangles:
+        for i in range(3):
+            edge = sort_edge((triangle[(i + 1) % 3], triangle[(i + 2) % 3]))
+            edges.add(edge)
+
+    return list(edges)
