@@ -1,16 +1,18 @@
-from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple, cast
 import logging
+from collections import defaultdict
+from typing import Dict, List, Set, Tuple, cast
 
 import numpy as np
 
+from geometry import geodesic_distance, get_circumcircle
+from plane_sweep import do_arcs_intersect
 from util import Triangle, Vector, sort_edge, sort_triangle
 
 
 def get_adjacent_triangles(
     triangles: List[Triangle],
 ) -> Dict[Tuple[int, int], List[int]]:
-    # For each edge, store the zero, one or two vertices with which a triangle is formed
+    # For each edge, store the vertices with which a triangle is formed
     adjacent_triangles: Dict[Tuple[int, int], List[int]] = defaultdict(
         lambda: cast(List[int], [])
     )
@@ -107,48 +109,3 @@ def flip_edge(
     bd = sort_edge((b, d))
     adjacent_triangles[bd].remove(a)
     adjacent_triangles[bd].append(c)
-
-
-def geodesic_distance(v: Vector, w: Vector) -> float:
-    return np.arccos(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)))
-
-
-def get_circumcircle(
-    a: Vector, b: Vector, c: Vector
-) -> Optional[Tuple[Vector, Vector, float]]:
-    """Return `center, normal, radius` of circle through the three nodes, if the
-    points aren't collinear. Return `None` if they are."""
-
-    a1, a2, a3 = a
-    b1, b2, b3 = b
-    c1, c2, c3 = c
-    a_norm2 = np.sum(a**2)
-    b_norm2 = np.sum(b**2)
-    c_norm2 = np.sum(c**2)
-
-    # Vector orthogonal to the plane spanned by vectors `b - a` and `c - a`
-    normal = np.cross(b - a, c - a)
-
-    A = np.array(
-        [
-            [b1 - a1, b2 - a2, b3 - a3],
-            [c1 - b1, c2 - b2, c3 - b3],
-            normal,
-        ]
-    )
-    rhs = np.array(
-        [0.5 * (b_norm2 - a_norm2), 0.5 * (c_norm2 - b_norm2), a.dot(normal)]
-    )
-
-    try:
-        center = np.linalg.solve(A, rhs)
-    except np.linalg.LinAlgError:
-        return None
-
-    radius = np.linalg.norm(center - a)
-
-    return (
-        cast(Vector, center),
-        cast(Vector, normal / np.linalg.norm(normal)),
-        cast(np.float64, radius),
-    )
