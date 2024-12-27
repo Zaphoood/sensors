@@ -15,10 +15,12 @@ def plane_sweep(
         sweep_direction = np.array([0, -1, 0], dtype=np.float64)
     triang_north, boundary_north = _plane_sweep_hemisphere(points, sweep_direction)
     triang_south, boundary_south = _plane_sweep_hemisphere(points, -sweep_direction)
+    print(f"{boundary_north=}")
+    print(f"{boundary_south=}")
     triang_equator = _stich_hemispheres(points, boundary_north, boundary_south)
 
     # return [*triang_north, *triang_south, *triang_equator]
-    return triang_south
+    return [*triang_north, *triang_south]
 
 
 def _plane_sweep_hemisphere(
@@ -126,6 +128,7 @@ def _plane_sweep_hemisphere(
 def _stich_hemispheres(
     points: List[Vector], boundary_north: List[int], boundary_south: List[int]
 ) -> List[Triangle]:
+    logging.info("--- _stich_hemispheres ---")
     n_north = len(boundary_north)
     n_south = len(boundary_south)
     if n_north < 3 or n_south < 3:
@@ -150,13 +153,13 @@ def _stich_hemispheres(
     first_closed: Optional[Union[Literal["north"], Literal["south"]]] = None
     while True:
         while north_cw[p_north][1] <= south_cw[p_south][1]:
-            triangulation.append(
-                (
-                    north_cw[p_north][0],
-                    north_cw[(p_north + 1) % n_north][0],
-                    south_cw[p_south][0],
-                )
+            new_triangle = (
+                north_cw[p_north][0],
+                north_cw[(p_north + 1) % n_north][0],
+                south_cw[p_south][0],
             )
+            logging.info(new_triangle)
+            triangulation.append(new_triangle)
             p_north += 1
             if p_north == n_north:
                 first_closed = "north"
@@ -164,13 +167,13 @@ def _stich_hemispheres(
         if first_closed is not None:
             break
         while south_cw[p_south][1] <= north_cw[p_north][1]:
-            triangulation.append(
-                (
-                    south_cw[p_south][0],
-                    south_cw[(p_south + 1) % n_south][0],
-                    north_cw[p_north][0],
-                )
+            new_triangle = (
+                south_cw[p_south][0],
+                south_cw[(p_south + 1) % n_south][0],
+                north_cw[p_north][0],
             )
+            logging.info(new_triangle)
+            triangulation.append(new_triangle)
             p_south += 1
             if p_south == n_south:
                 first_closed = "south"
@@ -180,23 +183,23 @@ def _stich_hemispheres(
 
     if first_closed == "north":
         while p_south < n_south:
-            triangulation.append(
-                (
-                    south_cw[p_south][0],
-                    south_cw[(p_south + 1) % n_south][0],
-                    north_cw[0][0],
-                )
+            new_triangle = (
+                south_cw[p_south][0],
+                south_cw[(p_south + 1) % n_south][0],
+                north_cw[0][0],
             )
+            logging.info(new_triangle)
+            triangulation.append(new_triangle)
             p_south += 1
     else:
         while p_north < n_north:
-            triangulation.append(
-                (
-                    north_cw[p_north][0],
-                    north_cw[(p_north + 1) % n_north][0],
-                    south_cw[0][0],
-                )
+            new_triangle = (
+                north_cw[p_north][0],
+                north_cw[(p_north + 1) % n_north][0],
+                south_cw[0][0],
             )
+            logging.info(new_triangle)
+            triangulation.append(new_triangle)
             p_north += 1
 
     return triangulation
