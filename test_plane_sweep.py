@@ -8,11 +8,14 @@ from plane_sweep import plane_sweep
 from util import get_edges, random_scatter_sphere
 
 
-def test_seed(seed: int, n_points: int) -> None:
+def test_seed(seed: int, n_points: int) -> float:
     np.random.seed(seed)
     points = random_scatter_sphere(n_points)
 
+    t_start = time.time()
     triang = plane_sweep(points)
+    t_end = time.time()
+
     edges = get_edges(triang)
     intersections = []
     for edge1 in edges:
@@ -35,28 +38,35 @@ def test_seed(seed: int, n_points: int) -> None:
     if len(intersections) > 0:
         raise RuntimeError("Intesecting arcs")
 
+    return t_end - t_start
+
 
 def test_many(n_repeat: int, n_points: int) -> None:
+    times = np.full(n_repeat, np.nan)
     for i in range(n_repeat):
         print(i, end="\r")
         seed = int(time.time() * 1000) % 2**32
         np.random.seed(seed)
         try:
-            test_seed(seed, n_points)
+            times[i] = test_seed(seed, n_points)
         except Exception as e:
             print(e)
             print(f"{seed = }")
             break
+
+    avg_time = np.nanmean(times)
+    std_time = np.sqrt(np.nanvar(times))
+    print(f"Average time: {avg_time*1000:.1f} ms (std. dev {std_time*1000:.1f} ms)")
 
 
 def main():
     logging.basicConfig(format="%(message)s", level=logging.WARN)
 
     # seed = int(time.time())
-    seed = 145075935
-    test_seed(seed, n_points=20)
+    # seed = 170014344
+    # test_seed(seed, n_points=20)
 
-    # test_many(100, n_points=20)
+    test_many(10, n_points=20)
 
 
 if __name__ == "__main__":
