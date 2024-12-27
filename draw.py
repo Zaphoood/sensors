@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Tuple, Union, cast
+from typing import List, Literal, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -158,6 +158,9 @@ def get_3d_circle_points(
     return cast(npt.NDArray[np.float64], starts), cast(npt.NDArray[np.float64], ends)
 
 
+ArcPointCount = Union[Literal["adaptive"], int]
+
+
 def draw_arc3d_z(
     buffer: pygame.Surface,
     z_buffer: pygame.Surface,
@@ -165,7 +168,7 @@ def draw_arc3d_z(
     color: Color,
     a: Vector,
     b: Vector,
-    n_points: int,
+    n_points: ArcPointCount,
     width: int = 1,
 ) -> List[BoundingBox]:
     starts, ends = get_3d_arc_points(a, b, n_points)
@@ -178,7 +181,7 @@ def draw_arc3d_z(
 
 
 def get_3d_arc_points(
-    a: Vector, b: Vector, n_points: int
+    a: Vector, b: Vector, n_points: ArcPointCount
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     normal = np.linalg.cross(a, b)
     a_orth = np.linalg.cross(normal, a)
@@ -186,6 +189,8 @@ def get_3d_arc_points(
 
     angle = np.arccos(np.dot(a, b))
 
+    if n_points == "adaptive":
+        n_points = int(angle / np.pi * 12)
     angles = np.linspace(0, angle, n_points + 1)
     starts = (
         np.cos(angles[:-1, np.newaxis]) * a + np.sin(angles[:-1, np.newaxis]) * a_orth

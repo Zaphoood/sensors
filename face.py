@@ -95,7 +95,7 @@ class Face(Drawable):
                 self.edge_color,
                 node1.position,
                 node2.position,
-                n_points=5,
+                n_points="adaptive",
             )
             bounding_boxes.extend(new_bounding_boxes)
 
