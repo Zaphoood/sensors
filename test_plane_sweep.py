@@ -14,6 +14,7 @@ def test_seed(seed: int, n_points: int) -> None:
 
     triang = plane_sweep(points)
     edges = get_edges(triang)
+    intersections = []
     for edge1 in edges:
         for edge2 in edges:
             if edge1 == edge2:
@@ -24,11 +25,15 @@ def test_seed(seed: int, n_points: int) -> None:
                 points[edge2[0]],
                 points[edge2[1]],
             ):
-                raise RuntimeError(
-                    f"Intersecting arcs: {edge1}, {edge2}\n"
-                    f"Edge 1: {points[edge1[0]]}, {points[edge1[1]]}\n"
-                    f"Edge 2: {points[edge2[0]]}, {points[edge2[1]]}"
-                )
+                intersections.append((edge1, edge2))
+    for edge1, edge2 in intersections:
+        print(
+            f"Intersecting arcs: {edge1}, {edge2}\n"
+            f"Edge 1: {points[edge1[0]]}, {points[edge1[1]]}\n"
+            f"Edge 2: {points[edge2[0]]}, {points[edge2[1]]}"
+        )
+    if len(intersections) > 0:
+        raise RuntimeError("Intesecting arcs")
 
 
 def test_many(n_repeat: int, n_points: int) -> None:

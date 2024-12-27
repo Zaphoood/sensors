@@ -17,7 +17,8 @@ def plane_sweep(
     triang_south, boundary_south = _plane_sweep_hemisphere(points, -sweep_direction)
     triang_equator = _stich_hemispheres(points, boundary_north, boundary_south)
 
-    return [*triang_north, *triang_south, *triang_equator]
+    # return [*triang_north, *triang_south, *triang_equator]
+    return triang_south
 
 
 def _plane_sweep_hemisphere(

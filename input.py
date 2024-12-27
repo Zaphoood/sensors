@@ -70,7 +70,7 @@ class InputManager:
                 self.fill_triangle()
             elif event.key == pygame.K_r:
                 if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    self.camera.position = np.array([0.0, 0.0, -1.0])
+                    self.camera.position = np.array([0.0, 0.0, 0.0])
                     self.camera.pitch = 0.0
                     self.camera.yaw = 0.0
                 else:

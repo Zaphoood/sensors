@@ -6,9 +6,9 @@ from typing import List, Optional
 
 import numpy as np
 
+from coordinate_axes import CoordinateAxes
 from miniball import get_max_enclosing_radius
 from plane_sweep import plane_sweep
-from coordinate_axes import CoordinateAxes
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
@@ -57,7 +57,7 @@ class App:
             print(
                 f"No input triangulation provided, picking random sample of {n_points} points"
             )
-            seed = 60291741
+            seed = 145075935
             np.random.seed(seed)
             points = random_scatter_sphere(n_points)
             triangles = []
