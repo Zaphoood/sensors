@@ -95,6 +95,7 @@ class Face(Drawable):
                 self.edge_color,
                 node1.position,
                 node2.position,
+                n_points=5,
             )
             bounding_boxes.extend(new_bounding_boxes)
 

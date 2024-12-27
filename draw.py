@@ -165,10 +165,10 @@ def draw_arc3d_z(
     color: Color,
     a: Vector,
     b: Vector,
-    n_steps: int = 10,
+    n_points: int,
     width: int = 1,
 ) -> List[BoundingBox]:
-    starts, ends = get_3d_arc_points(a, b, n_steps)
+    starts, ends = get_3d_arc_points(a, b, n_points)
     bounding_boxes: List[BoundingBox] = []
     for start, end in zip(starts, ends):
         bounding_box = draw_line3d_z(buffer, z_buffer, camera, color, start, end, width)
@@ -178,7 +178,7 @@ def draw_arc3d_z(
 
 
 def get_3d_arc_points(
-    a: Vector, b: Vector, n_steps: int
+    a: Vector, b: Vector, n_points: int
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     normal = np.linalg.cross(a, b)
     a_orth = np.linalg.cross(normal, a)
@@ -186,7 +186,7 @@ def get_3d_arc_points(
 
     angle = np.arccos(np.dot(a, b))
 
-    angles = np.linspace(0, angle, n_steps + 1)
+    angles = np.linspace(0, angle, n_points + 1)
     starts = (
         np.cos(angles[:-1, np.newaxis]) * a + np.sin(angles[:-1, np.newaxis]) * a_orth
     )
