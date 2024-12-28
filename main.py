@@ -32,6 +32,11 @@ from util import (
 )
 
 
+GENERATE_N_POINTS = 10
+SEED = 172609488
+np.random.seed(SEED)
+
+
 class App:
     def __init__(
         self, screen: pygame.surface.Surface, triangulation_path: Optional[str]
@@ -53,13 +58,10 @@ class App:
         if triangulation_path is not None:
             points, triangles = load_triangulation(triangulation_path, do_sort=True)
         else:
-            n_points = 20
             print(
-                f"No input triangulation provided, picking random sample of {n_points} points"
+                f"No input triangulation provided, picking random sample of {GENERATE_N_POINTS} points"
             )
-            seed = 145075935
-            np.random.seed(seed)
-            points = random_scatter_sphere(n_points)
+            points = random_scatter_sphere(GENERATE_N_POINTS)
             triangles = []
 
         self.nodes = [Node(point, label=f"{i}") for i, point in enumerate(points)]
