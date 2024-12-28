@@ -9,6 +9,7 @@ from util import get_edges, random_scatter_sphere
 
 
 def test_seed(seed: int, n_points: int) -> float:
+    print(f"{seed=}")
     np.random.seed(seed)
     # TODO: Make sure test cases are valid, i. e. not all points on one hemisphere
     points = random_scatter_sphere(n_points)
@@ -60,14 +61,27 @@ def test_many(n_repeat: int, n_points: int) -> None:
     print(f"Average time: {avg_time*1000:.1f} ms (std. dev {std_time*1000:.1f} ms)")
 
 
+GOOD_SEEDS = [
+    (177975474, 20),
+    (177975875, 20),
+    (177976197, 20),
+    (177976540, 20),
+    (177976874, 20),
+    (177977213, 20),
+    (177977555, 20),
+    (177977891, 20),
+    # (177978238, 20),
+]
+
+
 def main():
     logging.basicConfig(format="%(message)s", level=logging.WARN)
 
     # seed = int(time.time())
-    # seed = 170014344
-    # test_seed(seed, n_points=20)
+    for seed, n_points in GOOD_SEEDS:
+        test_seed(seed, n_points)
 
-    test_many(10, n_points=20)
+    # test_many(10, n_points=20)
 
 
 if __name__ == "__main__":
