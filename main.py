@@ -30,8 +30,8 @@ from util import (
 )
 
 
-GENERATE_N_POINTS = 30
-SEED = 172609488
+GENERATE_N_POINTS = 20
+SEED = 177978238
 np.random.seed(SEED)
 
 
@@ -182,7 +182,7 @@ parser.add_argument(
 
 
 def main():
-    logging.basicConfig(format="%(message)s", level=logging.WARN)
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
 
     args = parser.parse_args()
     if args.file is not None and not os.path.isfile(args.file):

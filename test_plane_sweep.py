@@ -64,16 +64,18 @@ GOOD_SEEDS = [
     (177977213, 20),
     (177977555, 20),
     (177977891, 20),
-    # (177978238, 20),
 ]
 
 
 def main():
-    logging.basicConfig(format="%(message)s", level=logging.WARN)
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
 
     # seed = int(time.time())
-    for seed, n_points in GOOD_SEEDS:
-        test_seed(seed, n_points)
+    # for seed, n_points in GOOD_SEEDS:
+    #     test_seed(seed, n_points)
+
+    seed, n_points = (177978238, 20)
+    test_seed(seed, n_points)
 
     # test_many(10, n_points=20)
 
