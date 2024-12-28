@@ -10,6 +10,7 @@ from util import get_edges, random_scatter_sphere
 
 def test_seed(seed: int, n_points: int) -> float:
     np.random.seed(seed)
+    # TODO: Make sure test cases are valid, i. e. not all points on one hemisphere
     points = random_scatter_sphere(n_points)
 
     t_start = time.time()
