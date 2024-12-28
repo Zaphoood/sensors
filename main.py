@@ -6,7 +6,6 @@ from typing import List, Optional
 
 import numpy as np
 
-from coordinate_axes import CoordinateAxes
 from miniball import get_max_enclosing_radius
 from plane_sweep import plane_sweep
 
@@ -21,7 +20,6 @@ from input import InputManager
 from node import Node
 from renderer import Renderer
 from util import (
-    BLACK,
     PINK,
     Triangle,
     load_triangulation,
@@ -32,7 +30,7 @@ from util import (
 )
 
 
-GENERATE_N_POINTS = 10
+GENERATE_N_POINTS = 30
 SEED = 172609488
 np.random.seed(SEED)
 
@@ -86,9 +84,6 @@ class App:
                 pygame.K_m: (lambda _: self.miniball()),
             },
         )
-
-        self.coordinates = CoordinateAxes(BLACK)
-        self.renderer.register_drawable(self.coordinates)
 
     def run_delaunay(self) -> None:
         delaunay_triangulation = get_delaunay(
@@ -187,7 +182,7 @@ parser.add_argument(
 
 
 def main():
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(message)s", level=logging.WARN)
 
     args = parser.parse_args()
     if args.file is not None and not os.path.isfile(args.file):
