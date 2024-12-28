@@ -10,11 +10,41 @@ from util import Triangle, Vector, shift, sort_triangle
 def plane_sweep(
     points: List[Vector], sweep_direction: Optional[Vector] = None
 ) -> List[Triangle]:
+    if len(points) < 4:
+        raise ValueError(
+            f"Plane sweep needs at least 4 input points but got {len(points)}"
+        )
+
     if sweep_direction is None:
         sweep_direction = np.array([0, -1, 0], dtype=np.float64)
     triang_north, boundary_north = _plane_sweep_hemisphere(points, sweep_direction)
     triang_south, boundary_south = _plane_sweep_hemisphere(points, -sweep_direction)
-    triang_equator = _stitch_hemispheres(points, boundary_north, boundary_south)
+
+    # Edge case: less than 3 points on at least one hemisphere. This means all the returned triangulation is empty and
+    # all points are in the boundary
+    if len(boundary_north) < 3 or len(boundary_south) < 3:
+        if len(boundary_north) + len(boundary_south) < 4:
+            raise RuntimeError("Unreachable")
+        # Tetrahedron
+        if len(boundary_north) == 2 and len(boundary_south) == 2:
+            return _get_tetrahedron([*boundary_north, *boundary_south])
+
+        # One hemisphere has only 1 or 2 vertices
+        smaller, larger = (
+            (boundary_north, boundary_south)
+            if len(boundary_north) < len(boundary_south)
+            else (boundary_south, boundary_north)
+        )
+        if len(smaller) == 1:
+            triang_equator = _fill_hole_with_one_vertex(smaller[0], larger)
+        elif len(smaller) == 2:
+            triang_equator = _fill_hole_with_two_vertices(
+                points, smaller[0], smaller[1], larger
+            )
+        else:
+            raise ValueError(f"Northern or southern hemisphere is empty")
+    else:
+        triang_equator = _stitch_hemispheres(points, boundary_north, boundary_south)
 
     return [*triang_north, *triang_south, *triang_equator]
 
@@ -22,23 +52,27 @@ def plane_sweep(
 def _plane_sweep_hemisphere(
     points: List[Vector], sweep_direction: Vector
 ) -> Tuple[List[Triangle], List[int]]:
+    logging.debug(f"--- _plane_sweep_hemisphere ({sweep_direction=})---")
+
+    points_sweep = [sweep_direction.dot(p) for p in points]
     # Sort-permutation of `points` by sweep direction.
-    points_sorted = sorted(
-        list(range(len(points))), key=lambda i: sweep_direction.dot(points[i])
-    )
+    points_sorted = sorted(list(range(len(points))), key=lambda i: points_sweep[i])
+    stop_idx = 0
+    while stop_idx < len(points_sweep) and points_sweep[points_sorted[stop_idx]] <= 0:
+        stop_idx += 1
+
+    if stop_idx < 3:
+        return [], points_sorted[:stop_idx]
+
     boundary_vertices = points_sorted[:3]
     triangulation = [(points_sorted[0], points_sorted[1], points_sorted[2])]
     logging.info(triangulation[0])
     for vertex in triangulation[0]:
-        logging.debug(f"{vertex=} {points[vertex]}")
+        logging.debug(f"-- {vertex=} {points[vertex]} --")
 
-    for vertex in points_sorted[3:-1]:
-        logging.info("--- iteration ---")
-        logging.debug(f"{vertex=} {points[vertex]}")
+    for vertex in points_sorted[3:stop_idx]:
+        logging.debug(f"-- {vertex=} {points[vertex]} --")
         logging.debug(f"boundary: {boundary_vertices}")
-        if sweep_direction.dot(points[vertex]) > 0:
-            logging.info("crossed equator, stop.")
-            break
 
         visible_vertices = np.full((len(boundary_vertices)), True)
         visible_midpoints = np.full((len(boundary_vertices)), True)
@@ -66,8 +100,8 @@ def _plane_sweep_hemisphere(
                     points[b1],
                 )
 
-        logging.debug(f"{visible_vertices=}")
-        logging.debug(f"{visible_midpoints=}")
+        # logging.debug(f"{visible_vertices=}")
+        # logging.debug(f"{visible_midpoints=}")
         # Edges of the boundary that are visible from current vertex.
         # Entry i corresponds to edge (boundary_vertices[i], boundary_vertices[(i + 1) % len(boundary_vertices)])
         visible_boundary_edges = (
@@ -75,7 +109,7 @@ def _plane_sweep_hemisphere(
             & visible_midpoints
             & np.hstack([visible_vertices[1:], visible_vertices[:1]])
         )
-        logging.debug(f"{visible_boundary_edges=}")
+        # logging.debug(f"{visible_boundary_edges=}")
         for i, (current, next) in enumerate(
             zip(boundary_vertices, shift(boundary_vertices))
         ):
@@ -129,7 +163,7 @@ def _stitch_hemispheres(
     n_south = len(boundary_south)
     if n_north < 3 or n_south < 3:
         raise ValueError(
-            f"Boundaries must be at least of length 3, but got north {n_south} and south {n_south}"
+            f"Boundaries must be at least of length 3, but got north {n_north} and south {n_south}"
         )
 
     # Order clockwise from -pi to pi (or anticlockwise? -- doesn't really matter, as long as they're ordered)
@@ -143,6 +177,7 @@ def _stitch_hemispheres(
     )
 
     triangulation: List[Triangle] = []
+    # TODO: Adjust this for different sweep directions
     north_pole = np.array([0, 1, 0])
     south_pole = np.array([0, -1, 0])
     # Pointers to current vertex on south and north boundary
@@ -158,6 +193,7 @@ def _stitch_hemispheres(
             n_next = north_cw[pn_next][0]
             s = south_cw[ps][0]
             s_next = south_cw[ps_next][0]
+
             if (
                 (
                     north_cw[pn][1] > south_cw[ps][1]
@@ -239,6 +275,62 @@ def _stitch_hemispheres(
             pn += 1
 
     return triangulation
+
+
+def _get_tetrahedron(vertices: List[int]) -> List[Triangle]:
+    assert len(vertices) == 4
+
+    return [
+        cast(Triangle, tuple([*vertices[:i], *vertices[i + 1 :]])) for i in range(4)
+    ]
+
+
+def _fill_hole_with_two_vertices(
+    points: List[Vector], hole_vertex1: int, hole_vertex2: int, hole_boundary: List[int]
+) -> List[Triangle]:
+    hole_boundary_arr = np.array(hole_boundary)
+
+    # Split the boundary points by the plane orthogonal to the vector from hole_vertex1 to hole_vertex2
+    boundary_points = np.array([points[idx] for idx in hole_boundary_arr])
+    direction_1to2 = points[hole_vertex2] - points[hole_vertex1]
+    directions = boundary_points.dot(direction_1to2)
+    in_half2 = directions > 0
+    half1 = cast(List[int], hole_boundary_arr[np.logical_not(in_half2)])
+    half2 = cast(List[int], hole_boundary_arr[in_half2])
+
+    # Connect boundary vertices on each side to the corresponding vertex in the hole
+    triangulation = []
+    for b1, b2 in zip(half1[:-1], half1[1:]):
+        triangulation.append((hole_vertex1, b1, b2))
+    for b1, b2 in zip(half2[:-1], half2[1:]):
+        triangulation.append((hole_vertex2, b1, b2))
+
+    # Connect edges that cross the plane
+    for cur in range(len(directions)):
+        next = (cur + 1) % len(directions)
+        if in_half2[cur] and not in_half2[next]:
+            triangulation.append(
+                (hole_boundary[cur], hole_boundary[next], hole_vertex2)
+            )
+            triangulation.append((hole_vertex1, hole_vertex2, hole_boundary[next]))
+        if not in_half2[cur] and in_half2[next]:
+            triangulation.append(
+                (hole_boundary[cur], hole_boundary[next], hole_vertex1)
+            )
+            triangulation.append((hole_vertex1, hole_vertex2, hole_boundary[next]))
+
+    return triangulation
+
+
+def _fill_hole_with_one_vertex(
+    hole_vertex: int, hole_boundary: List[int]
+) -> List[Triangle]:
+    return [
+        (hole_vertex, boundary_vertex1, boundary_vertex2)
+        for boundary_vertex1, boundary_vertex2 in zip(
+            hole_boundary, shift(hole_boundary)
+        )
+    ]
 
 
 def clockwise_distance(first: float, second: float) -> float:
