@@ -20,10 +20,8 @@ def test_seed(seed: int, n_points: int) -> float:
 
     edges = get_edges(triang)
     intersections = []
-    for edge1 in edges:
-        for edge2 in edges:
-            if edge1 == edge2:
-                continue
+    for i, edge1 in enumerate(edges):
+        for edge2 in edges[i + 1 :]:
             if do_arcs_intersect(
                 points[edge1[0]],
                 points[edge1[1]],
@@ -32,13 +30,9 @@ def test_seed(seed: int, n_points: int) -> float:
             ):
                 intersections.append((edge1, edge2))
     for edge1, edge2 in intersections:
-        print(
-            f"Intersecting arcs: {edge1}, {edge2}\n"
-            f"Edge 1: {points[edge1[0]]}, {points[edge1[1]]}\n"
-            f"Edge 2: {points[edge2[0]]}, {points[edge2[1]]}"
-        )
+        print(f"ERROR: Intersecting arcs: {edge1}, {edge2}")
     if len(intersections) > 0:
-        raise RuntimeError("Intesecting arcs")
+        raise RuntimeError("Plane sweep created intesecting arcs")
 
     return t_end - t_start
 
