@@ -44,7 +44,9 @@ def plane_sweep(
         else:
             raise ValueError(f"Northern or southern hemisphere is empty")
     else:
-        triang_equator = _stitch_hemispheres(points, boundary_north, boundary_south)
+        triang_equator = _stitch_hemispheres(
+            points, boundary_north, boundary_south, sweep_direction
+        )
 
     return [*triang_north, *triang_south, *triang_equator]
 
@@ -156,7 +158,10 @@ def _plane_sweep_hemisphere(
 
 
 def _stitch_hemispheres(
-    points: List[Vector], boundary_north: List[int], boundary_south: List[int]
+    points: List[Vector],
+    boundary_north: List[int],
+    boundary_south: List[int],
+    sweep_direction: Vector,
 ) -> List[Triangle]:
     logging.info("--- _stich_hemispheres ---")
     n_north = len(boundary_north)
@@ -178,8 +183,8 @@ def _stitch_hemispheres(
 
     triangulation: List[Triangle] = []
     # TODO: Adjust this for different sweep directions
-    north_pole = np.array([0, 1, 0])
-    south_pole = np.array([0, -1, 0])
+    north_pole = -sweep_direction
+    south_pole = sweep_direction
     # Pointers to current vertex on south and north boundary
     ps = 0
     pn = 0
