@@ -192,7 +192,7 @@ def main():
     pygame.init()
     screen_size = (1200, 900)
     screen = pygame.display.set_mode(screen_size)
-    pygame.display.set_caption("Delaunay")
+    pygame.display.set_caption("Triangulation of sphere surface")
     app = App(screen, args.file)
 
     while True:
