@@ -1,4 +1,4 @@
-from typing import List, Sequence, Set, Tuple, TypeVar, Union, cast
+from typing import List, Literal, Sequence, Set, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -7,6 +7,7 @@ Vector = npt.NDArray[np.float64]
 Color = Union[Tuple[int, int, int], List[int]]
 BoundingBox = Tuple[int, int, int, int]
 Triangle = Tuple[int, int, int]
+Edge = Tuple[int, int]
 
 
 WHITE = [255, 255, 255]
@@ -17,6 +18,8 @@ BLUE = [0, 0, 255]
 PINK = [251, 198, 207]
 
 T = TypeVar("T")
+
+DrawMode = Union[Literal["triangle"], Literal["arcs"]]
 
 
 def shift(a: Sequence[T], n: int = 1) -> Sequence[T]:

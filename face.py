@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 import pygame
@@ -8,9 +8,7 @@ from draw import draw_arc3d_z, draw_line3d_z, draw_triangle3d_z
 from illumination import Illumination
 from node import Node
 from renderer import Drawable
-from util import BLACK, GREEN, WHITE, BoundingBox, Color, Vector, shift
-
-DrawMode = Union[Literal["triangle"], Literal["arcs"]]
+from util import BLACK, GREEN, WHITE, BoundingBox, Color, DrawMode, Vector, shift
 
 
 class Face(Drawable):

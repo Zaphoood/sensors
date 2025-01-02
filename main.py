@@ -6,6 +6,8 @@ from typing import List, Optional
 
 import numpy as np
 
+from arc import Arc
+from connected import get_min_connecting_radius
 from miniball import get_max_enclosing_radius
 from plane_sweep import plane_sweep
 
@@ -21,10 +23,12 @@ from node import Node
 from renderer import Renderer
 from util import (
     PINK,
+    Edge,
     Triangle,
     load_triangulation,
     random_scatter_sphere,
     save_triangulation,
+    sort_edge,
     sort_triangle,
     sort_triangulation,
 )
@@ -66,6 +70,9 @@ class App:
         self.triangles: List[Triangle] = triangles
         self.faces: List[Face] = triangles_to_faces(self.nodes, self.triangles)
 
+        self.edges: List[Edge] = []
+        self.arcs: List[Arc] = []
+
         for node in self.nodes:
             self.renderer.register_drawable(node)
         for face in self.faces:
@@ -79,9 +86,10 @@ class App:
             key_callbacks={
                 pygame.K_SPACE: (lambda _: self.run_delaunay()),
                 pygame.K_e: (lambda _: self.export_triangulation()),
-                pygame.K_x: (lambda _: self.delete_all_triangles()),
+                pygame.K_x: (lambda _: self.delete_all()),
                 pygame.K_s: (lambda _: self.triangulate_plane_sweep()),
                 pygame.K_m: (lambda _: self.miniball()),
+                pygame.K_c: (lambda _: self.min_connecting_radius()),
             },
         )
 
@@ -98,11 +106,16 @@ class App:
         for face in self.faces:
             self.renderer.register_drawable(face)
 
-    def delete_all_triangles(self) -> None:
+    def delete_all(self) -> None:
         for face in self.faces:
             self.renderer.deregister_drawable(face)
         self.faces = []
         self.triangles = []
+
+        for arc in self.arcs:
+            self.renderer.deregister_drawable(arc)
+        self.arcs = []
+        self.edges = []
 
     def triangulate_plane_sweep(self) -> None:
         if len(self.triangles) > 0:
@@ -127,10 +140,30 @@ class App:
         if len(self.triangles) == 0:
             print("No triangulation")
             return
-        print(
-            f"Largest min-radius of current triangulation: "
-            f"{get_max_enclosing_radius([node.position for node in self.nodes], self.triangles)}"
+
+        max_enclosing_radius = get_max_enclosing_radius(
+            [node.position for node in self.nodes], self.triangles
         )
+        print(
+            f"Largest min-radius of current triangulation: " f"{max_enclosing_radius}"
+        )
+
+    def min_connecting_radius(self) -> None:
+        if len(self.nodes) == 0:
+            print("No vertices")
+            return
+
+        min_connecting_radius, adjacency_matrix = get_min_connecting_radius(
+            [node.position for node in self.nodes]
+        )
+        print(
+            f"Minimum radius for the Vietoris-Rips graph to be connected: {min_connecting_radius}"
+        )
+
+        for i in range(len(self.nodes)):
+            for j in range(i + 1, len(self.nodes)):
+                if adjacency_matrix[i, j]:
+                    self.add_edge((i, j))
 
     def export_triangulation(self) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -153,6 +186,15 @@ class App:
         self.faces.append(face)
         self.renderer.register_drawable(face)
 
+    def add_edge(self, edge: Edge) -> None:
+        """Does *not* check if the edge already exists"""
+        edge = sort_edge(edge)
+
+        self.edges.append(edge)
+        arc = edge_to_arc(self.nodes, edge)
+        self.arcs.append(arc)
+        self.renderer.register_drawable(arc)
+
     def update(self) -> bool:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -171,6 +213,10 @@ def triangles_to_faces(nodes: List[Node], triangles: List[Triangle]) -> List[Fac
 
 def triangle_to_face(nodes: List[Node], triangle: Triangle) -> Face:
     return Face((nodes[triangle[0]], nodes[triangle[1]], nodes[triangle[2]]))
+
+
+def edge_to_arc(nodes: List[Node], edge: Edge) -> Arc:
+    return Arc((nodes[edge[0]], nodes[edge[1]]))
 
 
 parser = argparse.ArgumentParser(
