@@ -46,9 +46,9 @@ class Face(Drawable):
         illumination: Illumination,
     ) -> Optional[Sequence[BoundingBox]]:
         if self.draw_mode == "triangle":
-            self._draw_triangle(buffer, z_buffer, camera, illumination)
+            return self._draw_triangle(buffer, z_buffer, camera, illumination)
         elif self.draw_mode == "arcs":
-            self._draw_arcs(buffer, z_buffer, camera)
+            return self._draw_arcs(buffer, z_buffer, camera)
         else:
             raise ValueError(
                 f"Exhaustive check of draw mode in {self.__class__.__name__}.draw(): '{self.draw_mode}'"
@@ -85,7 +85,7 @@ class Face(Drawable):
         buffer: pygame.surface.Surface,
         z_buffer: pygame.surface.Surface,
         camera: Camera,
-    ) -> Optional[Sequence[BoundingBox]]:
+    ) -> Sequence[BoundingBox]:
         bounding_boxes = []
         for node1, node2 in zip(self.nodes, shift(self.nodes)):
             new_bounding_boxes = draw_arc3d_z(
