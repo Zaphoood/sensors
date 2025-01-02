@@ -51,4 +51,4 @@ created as `triangulation_<timestamp>.txt`.
 ## Connecting the sensor network
 
 Press <kbd>C</kbd> to calculate the minimum radius for which the Vietoris-Rips graph (i.e. the 2-skeleton of the
-Vietoris-Rips complex) is connect, and show that graph.
+Vietoris-Rips complex) is connected, and show that graph.
