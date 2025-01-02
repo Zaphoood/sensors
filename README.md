@@ -1,5 +1,9 @@
 # Sensors
 
+## Installation
+
+Python >= 3.10 is required. Install the necessary packages with `pip install -r requirements.txt`.
+
 ## Usage
 
 Running the program without arguments will generate a sample of points randomly scattered on the sphere.
