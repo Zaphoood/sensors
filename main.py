@@ -8,6 +8,7 @@ import numpy as np
 
 from arc import Arc
 from connected import get_min_connecting_radius
+from electrons import simulate_electrons
 from miniball import get_max_enclosing_radius
 from plane_sweep import plane_sweep
 
@@ -33,8 +34,7 @@ from util import (
     sort_triangulation,
 )
 
-
-GENERATE_N_POINTS = 20
+GENERATE_N_POINTS = 50
 SEED = 177978238
 np.random.seed(SEED)
 
@@ -90,8 +90,11 @@ class App:
                 pygame.K_s: (lambda _: self.triangulate_plane_sweep()),
                 pygame.K_m: (lambda _: self.miniball()),
                 pygame.K_c: (lambda _: self.min_connecting_radius()),
+                pygame.K_l: (lambda _: self.start_stop_simulate_electrons()),
             },
         )
+
+        self.simulating_electrons = False
 
     def run_delaunay(self) -> None:
         delaunay_triangulation = get_delaunay(
@@ -135,6 +138,15 @@ class App:
         self.faces = triangles_to_faces(self.nodes, self.triangles)
         for face in self.faces:
             self.renderer.register_drawable(face)
+
+    def start_stop_simulate_electrons(self) -> None:
+        self.simulating_electrons = not self.simulating_electrons
+
+    def step_electron_simulation(self, n_iterations: int = 1) -> None:
+        positions = [node.position for node in self.nodes]
+        new_positions = simulate_electrons(positions, n_iterations=n_iterations)
+        for node, new_position in zip(self.nodes, new_positions):
+            node.position = new_position
 
     def miniball(self) -> None:
         if len(self.triangles) == 0:
@@ -200,6 +212,9 @@ class App:
             if event.type == pygame.QUIT:
                 return False
             self.input_manager.handle_event(event)
+
+        if self.simulating_electrons:
+            self.step_electron_simulation(n_iterations=20)
 
         return True
 
