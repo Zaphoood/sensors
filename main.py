@@ -46,10 +46,10 @@ class App:
         self.screen = screen
         screen_dimensions = (screen.get_width(), screen.get_height())
         self.camera = Camera(
-            np.array([0.8, 0.8, -1.0]),
+            np.array([1.6, 1.6, -2.0]),
             yaw=-np.pi / 10,
             pitch=-np.pi / 8,
-            focal_length=300,
+            focal_length=800,
             sensor_dimensions=screen_dimensions,
         )
         self.illumination = Illumination(Sun(np.array([1, -1, 1]), 1), ambience=0.4)
