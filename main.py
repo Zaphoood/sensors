@@ -145,8 +145,13 @@ class App:
     def step_electron_simulation(self, n_iterations: int = 1) -> None:
         positions = [node.position for node in self.nodes]
         new_positions = simulate_electrons(positions, n_iterations=n_iterations)
+
+        total_movement = 0
         for node, new_position in zip(self.nodes, new_positions):
+            total_movement += np.linalg.norm(new_position - node.position)
             node.position = new_position
+
+        print(f"{total_movement=}")
 
     def miniball(self) -> None:
         if len(self.triangles) == 0:
