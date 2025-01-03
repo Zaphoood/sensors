@@ -1,8 +1,8 @@
-from typing import Callable, Dict, List, Optional, Tuple, cast
+from typing import List, Tuple
 
 import numpy as np
 
-from util import Triangle, Vector, sort_edge, sort_triangle
+from util import Vector
 
 
 def less_close(
