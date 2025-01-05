@@ -38,6 +38,8 @@ GENERATE_N_POINTS = 50
 SEED = 177978238
 np.random.seed(SEED)
 
+SIMULATION_STEPS = 100
+
 
 class App:
     def __init__(
@@ -219,7 +221,7 @@ class App:
             self.input_manager.handle_event(event)
 
         if self.simulating_electrons:
-            self.step_electron_simulation(n_iterations=20)
+            self.step_electron_simulation(n_iterations=SIMULATION_STEPS)
 
         return True
 

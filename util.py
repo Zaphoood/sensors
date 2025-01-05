@@ -95,7 +95,7 @@ def get_bounding_box_2d(points: npt.NDArray) -> BoundingBox:
 
 def save_triangulation(
     path: str,
-    points: List[Vector],
+    points: List[Vector] | npt.NDArray[np.floating],
     triangles: List[Triangle],
 ) -> None:
     """Save a set of points and its triangulation to a file."""

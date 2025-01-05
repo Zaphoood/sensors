@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import List
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +10,13 @@ from util import Vector
 def simulate_electrons(
     initial_positions: List[Vector], n_iterations: int
 ) -> List[Vector]:
-    electrons = np.array(initial_positions)
+    return list(simulate_electrons_arr(np.array(initial_positions), n_iterations))
+
+
+def simulate_electrons_arr(
+    electrons: npt.NDArray[np.floating], n_iterations: int
+) -> npt.NDArray[np.floating]:
+
     gamma = 1e-3
 
     for _ in range(n_iterations):
@@ -27,9 +33,6 @@ def simulate_electrons(
 
                 new_electrons[i] += gamma * direction / dist**2
 
-        electrons = cast(
-            npt.NDArray[np.float64],
-            new_electrons / np.linalg.norm(new_electrons, axis=1)[:, np.newaxis],
-        )
+        electrons = new_electrons / np.linalg.norm(new_electrons, axis=1)[:, np.newaxis]
 
-    return list(electrons)
+    return electrons
