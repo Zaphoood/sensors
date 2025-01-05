@@ -1,5 +1,9 @@
 # Sensors
 
+## Installation
+
+Python >= 3.10 is required. Install the necessary packages with `pip install -r requirements.txt`.
+
 ## Usage
 
 Running the program without arguments will generate a sample of points randomly scattered on the sphere.
@@ -30,7 +34,7 @@ delaunay triangulation is found at `examles/triangulation_delaunay.txt`.
 ### Plane sweep
 
 To run the plane sweep algorithm on a point cloud, press <kbd>S</kbd>. You may need to remove existing triangles first
-by pressing <kbd>X</kbd>. (**Note:** This irrecoverably deletes all current triangles!)
+by pressing <kbd>X</kbd>. (**Note:** This irrecoverably deletes all current triangles and edges!)
 
 ### Manually
 
@@ -43,3 +47,8 @@ Finally, export the triangulation by pressing <kbd>E</kbd>.
 After creating or loading a triangulation, press <kbd>Space</kbd> to run the edge flip algorithm in order to obtain a
 Delaunay triangulation. Press <kbd>E</kbd> in order to export the current triangulation to a file. The file will be
 created as `triangulation_<timestamp>.txt`.
+
+## Connecting the sensor network
+
+Press <kbd>C</kbd> to calculate the minimum radius for which the Vietoris-Rips graph (i.e. the 2-skeleton of the
+Vietoris-Rips complex) is connected, and show that graph.

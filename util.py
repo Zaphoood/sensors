@@ -1,4 +1,4 @@
-from typing import List, Sequence, Set, Tuple, TypeVar, Union, cast
+from typing import List, Literal, Sequence, Set, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -7,6 +7,7 @@ Vector = npt.NDArray[np.float64]
 Color = Union[Tuple[int, int, int], List[int]]
 BoundingBox = Tuple[int, int, int, int]
 Triangle = Tuple[int, int, int]
+Edge = Tuple[int, int]
 
 
 WHITE = [255, 255, 255]
@@ -17,6 +18,8 @@ BLUE = [0, 0, 255]
 PINK = [251, 198, 207]
 
 T = TypeVar("T")
+
+DrawMode = Union[Literal["triangle"], Literal["arcs"]]
 
 
 def shift(a: Sequence[T], n: int = 1) -> Sequence[T]:
@@ -156,12 +159,8 @@ def random_scatter_sphere(n: int) -> List[Vector]:
     """Randomly scatter `n` points on the surface of the 2-sphere"""
     points = []
     while len(points) < n:
-        point = (np.random.random(3) * 2) - 1
-        norm = np.linalg.norm(point)
-        if not 0 < norm <= 1:
-            continue
-
-        points.append(cast(Vector, point / norm))
+        point = np.random.randn(3)
+        points.append(cast(Vector, point / np.linalg.norm(point)))
 
     return points
 

@@ -34,6 +34,7 @@ def do_arcs_intersect(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
     inters = cast(Vector, np.linalg.cross(norm1, norm2))
     inters /= np.linalg.norm(inters)
 
+    # Great circles intersect in two antipodal points, therefore we also check `-inters`
     return (_is_in_arc(inters, a, b) and _is_in_arc(inters, c, d)) or (
         _is_in_arc(-inters, a, b) and _is_in_arc(-inters, c, d)
     )
