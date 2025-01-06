@@ -177,3 +177,6 @@ def get_edges(
             edges.add(edge)
 
     return list(edges)
+
+def _normalize(v: Vector) -> Vector:
+    return cast(Vector, v / np.linalg.norm(v))
