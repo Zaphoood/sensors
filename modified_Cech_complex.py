@@ -17,10 +17,6 @@ def _less_close(
     return True
 
 
-def _normalize(point: Vector) -> Vector:
-    return cast(Vector, point / np.linalg.norm(point))
-
-
 def get_circumradius(A: Vector, B: Vector, C: Vector) -> float:
     center_or_opposite = np.cross(B - A, C - A)
     center_or_opposite /= np.linalg.norm(center_or_opposite)
