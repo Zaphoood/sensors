@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import logging
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
@@ -40,12 +41,39 @@ def edge_flip(points: List[Vector], triangles: List[Triangle]) -> List[Triangle]
                 flip_edge(adjacent_triangles, edge)
                 any_flipped = True
 
+    return _get_triangulation_from_adjacent_triangles(adjacent_triangles)
+
+
+def _get_triangulation_from_adjacent_triangles(
+    adjacent_triangles: Dict[Tuple[int, int], List[int]]
+) -> List[Triangle]:
     new_triangulation: Set[Triangle] = set()
     for edge, adjacent_vertices in adjacent_triangles.items():
         for vertex in adjacent_vertices:
             new_triangulation.add(sort_triangle((*edge, vertex)))
 
     return list(new_triangulation)
+
+
+def edge_flip_iterative(
+    points: List[Vector], triangles: List[Triangle]
+) -> Iterable[List[Triangle]]:
+    adjacent_triangles = get_adjacent_triangles(triangles)
+    any_flipped = True
+
+    while any_flipped:
+        logging.info("--- iteration ---")
+        any_flipped = False
+        edges = list(adjacent_triangles.keys())
+        for edge in edges:
+            adjacent_vertices = tuple(adjacent_triangles[edge])
+            if len(adjacent_vertices) != 2:
+                continue
+
+            if should_flip(points, edge, adjacent_vertices):
+                flip_edge(adjacent_triangles, edge)
+                yield _get_triangulation_from_adjacent_triangles(adjacent_triangles)
+                any_flipped = True
 
 
 def should_flip(
