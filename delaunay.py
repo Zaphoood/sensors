@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Tuple
 import numpy as np
 
 from geometry import geodesic_distance, get_circumcircle
+from plane_sweep import plane_sweep
 from util import Triangle, Vector, sort_edge, sort_triangle
 
 
@@ -22,7 +23,7 @@ def get_adjacent_triangles(
     return adjacent_triangles
 
 
-def get_delaunay(points: List[Vector], triangles: List[Triangle]) -> List[Triangle]:
+def edge_flip(points: List[Vector], triangles: List[Triangle]) -> List[Triangle]:
     adjacent_triangles = get_adjacent_triangles(triangles)
     any_flipped = True
 
@@ -106,3 +107,8 @@ def flip_edge(
     bd = sort_edge((b, d))
     adjacent_triangles[bd].remove(a)
     adjacent_triangles[bd].append(c)
+
+
+def get_delaunay(points: List[Vector]) -> List[Triangle]:
+    triangulation = plane_sweep(points)
+    return edge_flip(points, triangulation)
