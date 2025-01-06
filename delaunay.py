@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple, cast
+from typing import Dict, List, Set, Tuple
 
 import numpy as np
 
@@ -12,9 +12,7 @@ def get_adjacent_triangles(
     triangles: List[Triangle],
 ) -> Dict[Tuple[int, int], List[int]]:
     # For each edge, store the vertices with which a triangle is formed
-    adjacent_triangles: Dict[Tuple[int, int], List[int]] = defaultdict(
-        lambda: cast(List[int], [])
-    )
+    adjacent_triangles: Dict[Tuple[int, int], List[int]] = defaultdict(lambda: [])
 
     for triangle in triangles:
         for i in range(3):
@@ -70,7 +68,7 @@ def should_flip(
     center, _, radius = cc_params
 
     geodesic_radius = np.arcsin(radius)
-    epicenter = cast(Vector, center / np.linalg.norm(center))
+    epicenter = center / np.linalg.norm(center)
     geodesic_dist_w = geodesic_distance(epicenter, w)
     logging.debug(f"Center {center}, radius {radius:.3f}")
     logging.debug(f"Epicenter {epicenter}, geodesic radius {geodesic_radius:.3f})")

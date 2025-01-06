@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, cast
+from typing import Any, Optional, Tuple
 
 import numpy as np
 
@@ -31,7 +31,7 @@ def do_arcs_intersect(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
     # Calculate intersection of the two great circles defined by (a, b) and (c, d)
     norm1 = np.linalg.cross(a, b)
     norm2 = np.linalg.cross(c, d)
-    inters = cast(Vector, np.linalg.cross(norm1, norm2))
+    inters = np.linalg.cross(norm1, norm2)
     inters /= np.linalg.norm(inters)
 
     # Great circles intersect in two antipodal points, therefore we also check `-inters`
@@ -55,7 +55,7 @@ def geodesic_distance(v: Vector, w: Vector) -> float:
 
 def get_circumcircle(
     a: Vector, b: Vector, c: Vector
-) -> Optional[Tuple[Vector, Vector, float]]:
+) -> Optional[Tuple[Vector, Vector, np.floating[Any]]]:
     """Return `center, normal, radius` of circle through the three nodes, if the
     points aren't collinear. Return `None` if they are."""
 
@@ -87,8 +87,4 @@ def get_circumcircle(
 
     radius = np.linalg.norm(center - a)
 
-    return (
-        cast(Vector, center),
-        cast(Vector, normal / np.linalg.norm(normal)),
-        cast(np.float64, radius),
-    )
+    return (center, normal / np.linalg.norm(normal), radius)

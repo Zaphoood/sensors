@@ -1,4 +1,4 @@
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 import numpy as np
 import pygame
@@ -6,8 +6,8 @@ import pygame
 from camera import Camera
 from draw import draw_line3d_z
 from illumination import Illumination
-from renderer import Drawable, distance_to_z_buffer, distance_to_z_value
-from util import BoundingBox, Color, Vector
+from renderer import Drawable, distance_to_z_buffer
+from util import BoundingBox, Color
 
 
 class CoordinateAxes(Drawable):
@@ -34,7 +34,7 @@ class CoordinateAxes(Drawable):
                 buffer, z_buffer, camera, self.color, origin, endpoint3d
             )
 
-            screen_pos = camera.world_to_screen(cast(Vector, endpoint3d * 1.1))
+            screen_pos = camera.world_to_screen(endpoint3d * 1.1)
             if screen_pos is not None:
                 endpoint2d, z = screen_pos
                 text_position = tuple(

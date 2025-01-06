@@ -1,9 +1,9 @@
-from typing import List, Literal, Sequence, Set, Tuple, TypeVar, Union, cast
+from typing import Any, List, Literal, Sequence, Set, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import numpy.typing as npt
 
-Vector = npt.NDArray[np.float64]
+Vector = npt.NDArray[np.floating[Any]]
 Color = Union[Tuple[int, int, int], List[int]]
 BoundingBox = Tuple[int, int, int, int]
 Triangle = Tuple[int, int, int]
@@ -160,7 +160,7 @@ def random_scatter_sphere(n: int) -> List[Vector]:
     points = []
     while len(points) < n:
         point = np.random.randn(3)
-        points.append(cast(Vector, point / np.linalg.norm(point)))
+        points.append(point / np.linalg.norm(point))
 
     return points
 

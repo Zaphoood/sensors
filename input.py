@@ -133,7 +133,7 @@ class InputManager:
 
         grabbed_node = self.nodes[self.selected_nodes[0]]
         plane_depth = self.camera.to_camera_coords(
-            cast(Vector, grabbed_node.position - self.camera.position)
+            grabbed_node.position - self.camera.position
         )[2]
 
         mouse_pos = np.array(pygame.mouse.get_pos())
@@ -144,7 +144,7 @@ class InputManager:
         offset = view_ray_in_plane - grabbed_node.position
 
         self.grab_info = InputManager.GrabInfo(
-            plane_depth, grabbed_node.position, cast(Vector, offset)
+            plane_depth, grabbed_node.position, offset
         )
 
     def cancel_grab(self, grab_info: GrabInfo) -> None:
@@ -162,9 +162,9 @@ class InputManager:
             closest_coords, _ = closest_point_on_ray(
                 self.camera.position, ray, node.position
             )
-            dist_to_node = np.linalg.norm(closest_coords - node.position)
+            dist_to_node = float(np.linalg.norm(closest_coords - node.position))
             if dist_to_node <= NODE_HITBOX:
-                close_candidates.append((i, cast(float, dist_to_node)))
+                close_candidates.append((i, dist_to_node))
 
         if not append_selection:
             for node in self.selected_nodes:
@@ -207,7 +207,7 @@ class InputManager:
         )
         new_position = new_view_ray_in_plane - grab_info.offset
         new_position /= np.linalg.norm(new_position)
-        self.nodes[self.selected_nodes[0]].position = cast(Vector, new_position)
+        self.nodes[self.selected_nodes[0]].position = new_position
 
     def handle_pan_mouse_move(
         self, pan_info: PanInfo, new_mouse_pos: Tuple[int, int]
@@ -241,7 +241,7 @@ class InputManager:
     def handle_mouse_scroll(self, event: pygame.event.Event) -> None:
         direction = 1 if event.button == 4 else -1
         offset = self.camera_move_step * np.array([0, 0, direction])
-        self.camera.pan(cast(Vector, offset))
+        self.camera.pan(offset)
 
     def fill_triangle(self) -> None:
         if len(self.selected_nodes) != 3:

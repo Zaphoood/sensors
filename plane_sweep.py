@@ -97,7 +97,7 @@ def _plane_sweep_hemisphere(
                     (current, next) == (b0, b1)
                 ) or not do_arcs_intersect(
                     points[vertex],
-                    cast(Vector, midpoint),
+                    midpoint,
                     points[b0],
                     points[b1],
                 )

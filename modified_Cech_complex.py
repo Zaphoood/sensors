@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, cast, Set
+from typing import List, Optional, Tuple, Set
 import itertools
 import networkx as nx
 

@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Sequence, Tuple, Union, cast
+from typing import Any, List, Literal, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -39,7 +39,7 @@ def draw_line3d_z(
 ) -> BoundingBox:
     start_pos = camera.world_to_screen(start)
     end_pos = camera.world_to_screen(end)
-    mid_pos = camera.world_to_screen(cast(Vector, (start + end) / 2))
+    mid_pos = camera.world_to_screen((start + end) / 2)
     if not (start_pos is None or end_pos is None or mid_pos is None):
         start2d, _ = start_pos
         end2d, _ = end_pos
@@ -133,7 +133,7 @@ def get_3d_circle_points(
     normal: Vector,
     radius: float,
     n_points: int,
-) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+) -> Tuple[npt.NDArray[np.floating[Any]], npt.NDArray[np.floating[Any]]]:
     n1, n2, n3 = normal
     # Construct two vectors orthogonal to the normal and to each other, to use as basis for circle points
     if np.isclose(n1, 0):
@@ -155,7 +155,7 @@ def get_3d_circle_points(
     ends = center + radius * (
         np.cos(angles[1:, np.newaxis]) * orth1 + np.sin(angles[1:, np.newaxis]) * orth2
     )
-    return cast(npt.NDArray[np.float64], starts), cast(npt.NDArray[np.float64], ends)
+    return starts, ends
 
 
 ArcPointCount = Union[Literal["adaptive"], int]

@@ -5,7 +5,7 @@ import pygame
 
 from illumination import Illumination
 from renderer import Drawable, distance_to_z_buffer
-from util import WHITE, BoundingBox, Vector, BLACK
+from util import BoundingBox, Vector, BLACK
 from camera import Camera
 
 NODE_SIZE_PX = 16
@@ -26,7 +26,7 @@ class Node(Drawable):
         color: Sequence[int] = BLACK,
         label: Optional[str] = None,
     ) -> None:
-        self.position = position.astype(np.float64)
+        self.position: Vector = position.astype(np.float64)
         self.color = color
         self.selected = False
 

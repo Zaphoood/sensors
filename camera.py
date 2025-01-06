@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union, cast
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -58,7 +58,7 @@ class Camera:
         """Map 3D point to pixel coordinates on camera sensor and z-depth. Return `None` if the point lies behind the camera."""
         assert point3d.shape == (3,)
 
-        point3d_offset = cast(Vector, point3d - self.position)
+        point3d_offset = point3d - self.position
         point3d_camera_coords = self.to_camera_coords(point3d_offset)
         if point3d_camera_coords[2] <= 0:
             return None
@@ -76,7 +76,7 @@ class Camera:
         ray_camera_coords = np.array(
             [point2d[0] - self.t_x, -(point2d[1] - self.t_y), self.focal_length]
         )
-        return cast(Vector, ray_camera_coords / np.linalg.norm(ray_camera_coords))
+        return ray_camera_coords / np.linalg.norm(ray_camera_coords)
 
     def get_view_ray_world(self, point2d: Union[Tuple[int, int], Vector]) -> Vector:
         """Map a 2D point on the camera sensor to a unit vector pointing in that view direction, expressed in world coordinates"""

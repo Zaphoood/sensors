@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from typing import List, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -30,16 +30,13 @@ def save_electron_animation(
 
     for n_repeat, n_steps in iteration_groups:
         for _ in range(n_repeat):
-            points = cast(
-                npt.NDArray[np.float64],
-                simulate_electrons_arr(points, n_iterations=n_steps),
-            )
+            points = simulate_electrons_arr(points, n_iterations=n_steps)
             step += n_steps
             save_simulation_state(points, step, out_dir, basename)
 
 
 def save_simulation_state(
-    points: npt.NDArray[np.float64], step: int, out_dir: str, basename: str
+    points: npt.NDArray[np.floating[Any]], step: int, out_dir: str, basename: str
 ) -> None:
     path = os.path.join(out_dir, f"{basename}{step}.txt")
     print(f"Saving to {path}")

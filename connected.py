@@ -1,4 +1,4 @@
-from typing import List, Tuple, cast
+from typing import List, Tuple
 import networkx
 
 import numpy as np
@@ -39,7 +39,7 @@ def main():
         np.array([np.sqrt(2), np.sqrt(2), 0]),
         np.array([0, 1, 0]),
     ]
-    points = [cast(Vector, point / np.linalg.norm(point)) for point in points]
+    points = [point / np.linalg.norm(point) for point in points]
     print(get_min_connecting_radius(points))
 
 

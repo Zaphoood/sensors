@@ -1,6 +1,5 @@
-from typing import List, Optional, Sequence, Tuple, cast
+from typing import List, Optional, Sequence
 
-import numpy as np
 import pygame
 
 from camera import Camera
@@ -9,7 +8,7 @@ from draw import draw_circle3d_z
 from illumination import Illumination
 from node import Node
 from renderer import Drawable
-from util import BoundingBox, Color, Vector
+from util import BoundingBox, Color
 
 
 class Circumcircle(Drawable):

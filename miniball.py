@@ -1,4 +1,4 @@
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 import numpy as np
 
@@ -19,12 +19,12 @@ def miniball3(a: Vector, b: Vector, c: Vector) -> Tuple[Vector, float]:
         cos_radius = points[i].dot(midpoint)
         if points[(i + 2) % 3].dot(midpoint) >= cos_radius:
             # Points `i` and `(i+1)%3` on boundary; `(i+2)%3` inside
-            return cast(Vector, midpoint), np.arccos(cos_radius)
+            return midpoint, np.arccos(cos_radius)
 
     params = get_circumcircle(a, b, c)
     assert params is not None  # At this point, the points cannot be collinear
     center, _, _ = params
-    epicenter = cast(Vector, center / np.linalg.norm(center))
+    epicenter = center / np.linalg.norm(center)
 
     return epicenter, np.arccos(a.dot(epicenter))
 
