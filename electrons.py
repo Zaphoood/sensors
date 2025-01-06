@@ -6,18 +6,20 @@ import numpy.typing as npt
 from geometry import geodesic_distance
 from util import Vector
 
+DEFAULT_GAMMA = 1e-2
+
 
 def simulate_electrons(
-    initial_positions: List[Vector], n_iterations: int
+    initial_positions: List[Vector], n_iterations: int, gamma: float = DEFAULT_GAMMA
 ) -> List[Vector]:
-    return list(simulate_electrons_arr(np.array(initial_positions), n_iterations))
+    return list(
+        simulate_electrons_arr(np.array(initial_positions), n_iterations, gamma)
+    )
 
 
 def simulate_electrons_arr(
-    electrons: npt.NDArray[np.floating], n_iterations: int
+    electrons: npt.NDArray[np.floating], n_iterations: int, gamma: float = DEFAULT_GAMMA
 ) -> npt.NDArray[np.floating]:
-
-    gamma = 1e-3
 
     for _ in range(n_iterations):
         new_electrons = np.copy(electrons)

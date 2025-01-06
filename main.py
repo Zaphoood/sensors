@@ -38,8 +38,6 @@ GENERATE_N_POINTS = 50
 SEED = 177978238
 np.random.seed(SEED)
 
-SIMULATION_STEPS = 100
-
 
 class App:
     def __init__(
@@ -144,9 +142,9 @@ class App:
     def start_stop_simulate_electrons(self) -> None:
         self.simulating_electrons = not self.simulating_electrons
 
-    def step_electron_simulation(self, n_iterations: int = 1) -> None:
+    def step_electron_simulation(self) -> None:
         positions = [node.position for node in self.nodes]
-        new_positions = simulate_electrons(positions, n_iterations=n_iterations)
+        new_positions = simulate_electrons(positions, 1)
 
         total_movement = 0
         for node, new_position in zip(self.nodes, new_positions):
@@ -221,7 +219,7 @@ class App:
             self.input_manager.handle_event(event)
 
         if self.simulating_electrons:
-            self.step_electron_simulation(n_iterations=SIMULATION_STEPS)
+            self.step_electron_simulation()
 
         return True
 
