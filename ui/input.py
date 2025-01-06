@@ -6,7 +6,7 @@ import numpy.typing as npt
 import pygame
 
 from ui.face import Face
-from node import Node
+from ui.node import Node
 from util import Triangle, Vector, closest_point_on_ray
 from ui.camera import Camera
 

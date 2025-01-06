@@ -4,7 +4,7 @@ import numpy as np
 import pygame
 
 from ui.illumination import Illumination
-from renderer import Drawable, distance_to_z_buffer
+from ui.renderer import Drawable, distance_to_z_buffer
 from util import BoundingBox, Vector, BLACK
 from ui.camera import Camera
 

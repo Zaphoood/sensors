@@ -5,7 +5,7 @@ import numpy.typing as npt
 import pygame
 
 from ui.camera import Camera
-from renderer import distance_to_z_buffer
+from ui.renderer import distance_to_z_buffer
 from util import BoundingBox, Color, Vector, get_bounding_box_2d
 
 

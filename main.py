@@ -20,8 +20,8 @@ from delaunay import get_delaunay
 from ui.face import Face
 from ui.illumination import Illumination, Sun
 from ui.input import InputManager
-from node import Node
-from renderer import Renderer
+from ui.node import Node
+from ui.renderer import Renderer
 from util import (
     PINK,
     Edge,

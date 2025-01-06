@@ -6,7 +6,7 @@ import pygame
 from ui.camera import Camera
 from draw import draw_line3d_z
 from illumination import Illumination
-from renderer import Drawable, distance_to_z_buffer
+from ui.renderer import Drawable, distance_to_z_buffer
 from util import BoundingBox, Color
 
 
