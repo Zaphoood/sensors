@@ -16,7 +16,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 
 from ui.camera import Camera
-from delaunay import get_delaunay
+from delaunay import edge_flip
 from ui.face import Face
 from ui.illumination import Illumination, Sun
 from ui.input import InputManager
@@ -99,7 +99,7 @@ class App:
         self.simulating_electrons = False
 
     def run_delaunay(self) -> None:
-        delaunay_triangulation = get_delaunay(
+        delaunay_triangulation = edge_flip(
             [node.position for node in self.nodes], self.triangles
         )
 
