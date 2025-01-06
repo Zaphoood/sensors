@@ -5,7 +5,7 @@ import pygame
 
 from ui.camera import Camera
 from ui.draw import draw_arc3d_z, draw_line3d_z, draw_triangle3d_z
-from illumination import Illumination
+from ui.illumination import Illumination
 from ui.node import Node
 from ui.renderer import Drawable
 from util import BLACK, GREEN, WHITE, BoundingBox, Color, DrawMode, Vector, shift
