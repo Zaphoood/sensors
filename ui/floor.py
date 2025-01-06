@@ -1,8 +1,8 @@
 import numpy as np
 import pygame
 
-from camera import Camera
-from draw import draw_line3d
+from ui.camera import Camera
+from ui.draw import draw_line3d
 from util import Color
 
 

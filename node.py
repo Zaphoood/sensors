@@ -3,10 +3,10 @@ from typing import Optional, Sequence
 import numpy as np
 import pygame
 
-from illumination import Illumination
+from ui.illumination import Illumination
 from renderer import Drawable, distance_to_z_buffer
 from util import BoundingBox, Vector, BLACK
-from camera import Camera
+from ui.camera import Camera
 
 NODE_SIZE_PX = 16
 

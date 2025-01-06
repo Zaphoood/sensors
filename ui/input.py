@@ -5,10 +5,10 @@ import numpy as np
 import numpy.typing as npt
 import pygame
 
-from face import Face
+from ui.face import Face
 from node import Node
 from util import Triangle, Vector, closest_point_on_ray
-from camera import Camera
+from ui.camera import Camera
 
 NODE_HITBOX = 0.3
 

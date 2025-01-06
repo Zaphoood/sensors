@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from arc import Arc
+from ui.arc import Arc
 from connected import get_min_connecting_radius
 from electrons import simulate_electrons
 from miniball import get_max_enclosing_radius
@@ -15,11 +15,11 @@ from plane_sweep import plane_sweep
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 
-from camera import Camera
+from ui.camera import Camera
 from delaunay import get_delaunay
-from face import Face
-from illumination import Illumination, Sun
-from input import InputManager
+from ui.face import Face
+from ui.illumination import Illumination, Sun
+from ui.input import InputManager
 from node import Node
 from renderer import Renderer
 from util import (

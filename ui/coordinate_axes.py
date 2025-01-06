@@ -3,7 +3,7 @@ from typing import List, Tuple
 import numpy as np
 import pygame
 
-from camera import Camera
+from ui.camera import Camera
 from draw import draw_line3d_z
 from illumination import Illumination
 from renderer import Drawable, distance_to_z_buffer

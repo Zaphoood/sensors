@@ -2,10 +2,10 @@ from typing import List, Optional, Sequence
 
 import pygame
 
-from camera import Camera
+from ui.camera import Camera
 from delaunay import get_circumcircle
-from draw import draw_circle3d_z
-from illumination import Illumination
+from ui.draw import draw_circle3d_z
+from ui.illumination import Illumination
 from node import Node
 from renderer import Drawable
 from util import BoundingBox, Color

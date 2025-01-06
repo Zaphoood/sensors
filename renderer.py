@@ -6,8 +6,8 @@ from typing import List, Optional, Sequence, Tuple
 import numpy as np
 import pygame
 
-from camera import Camera
-from illumination import Illumination
+from ui.camera import Camera
+from ui.illumination import Illumination
 from util import BLACK, BoundingBox, Color
 
 FONT_SIZE = 20
