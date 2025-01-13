@@ -18,7 +18,7 @@ def get_min_connecting_radius(
     assert np.allclose(np.linalg.norm(points_arr, axis=1), 1)
 
     # Need to clip since numeric errors may result in dot product > 1 even if inputs all have norm 1
-    dots = np.clip(points_arr @ points_arr.T, 0, 1)
+    dots = np.clip(points_arr @ points_arr.T, -1, 1)
     pairwise_distances = np.arccos(dots)
     distances_sorted = np.sort(pairwise_distances.flatten())
 
