@@ -78,7 +78,7 @@ def add_simplex_and_larger(sx: Set[int], cx: Set[Tuple[int, ...]], n: int) -> No
             add_simplex_and_larger(sx.union({i}), cx, n)
 
 
-def get_full_triangulation_radius(points: List[Vector]) -> Optional[float]:
+def get_R(points: List[Vector]) -> Optional[float]:
     n = len(points)
     all_triangles = get_triangle_order(points)
 
