@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, cast
 import itertools
 import networkx as nx
 
@@ -44,6 +44,23 @@ def get_smallest_enclosing_radius(A: Vector, B: Vector, C: Vector) -> float:
     return get_circumradius(A, B, C)
 
 
+def not_contained_in_hemisphere(a: Vector, b: Vector, c: Vector, d: Vector) -> bool:
+    """
+    Check whether four unit vectors are contained in a hemisphere.
+    """
+
+    barycentric_coordinates_of_origin = np.linalg.solve(
+        np.array([b - a, c - a, d - a]).T, -a
+    )
+
+    return (
+        _less_close(0, barycentric_coordinates_of_origin[0])
+        and _less_close(0, barycentric_coordinates_of_origin[1])
+        and _less_close(0, barycentric_coordinates_of_origin[2])
+        and _less_close(cast(float, np.sum(barycentric_coordinates_of_origin)), 1)
+    )
+
+
 def get_triangle_order(points: List[Vector]) -> List[Set[int]]:
     n = len(points)
 
@@ -61,8 +78,21 @@ def get_triangle_order(points: List[Vector]) -> List[Set[int]]:
     return sorted([x for _, x in sorted(zip(enclosing_circle_radii, triangles))])
 
 
-def add_simplex_and_larger(sx: Set[int], cx: Set[Tuple[int, ...]], n: int) -> None:
-    cx.add(tuple(sorted(sx)))
+def add_simplex_and_larger(
+    sx: Set[int], cx: Set[Tuple[int, ...]], points: List[Vector]
+) -> None:
+    n = len(points)
+
+    sorted_tuple = tuple(sorted(sx))
+    if len(sx) == 4 and not_contained_in_hemisphere(
+        points[sorted_tuple[0]],
+        points[sorted_tuple[1]],
+        points[sorted_tuple[2]],
+        points[sorted_tuple[3]],
+    ):  # Do not add tetrahedra that are not contained in a hemisphere
+        return
+
+    cx.add(sorted_tuple)
     for i in range(n):
         if i in sx:
             continue
@@ -75,10 +105,10 @@ def add_simplex_and_larger(sx: Set[int], cx: Set[Tuple[int, ...]], n: int) -> No
                 break
 
         if builds_larger_simplex:
-            add_simplex_and_larger(sx.union({i}), cx, n)
+            add_simplex_and_larger(sx.union({i}), cx, points)
 
 
-def get_full_triangulation_radius(points: List[Vector]) -> Optional[float]:
+def get_R(points: List[Vector]) -> Optional[float]:
     n = len(points)
     all_triangles = get_triangle_order(points)
 
@@ -89,11 +119,11 @@ def get_full_triangulation_radius(points: List[Vector]) -> Optional[float]:
     graph_connected = False
 
     for triangle in all_triangles:
-        add_simplex_and_larger(triangle, complex, n)
+        add_simplex_and_larger(triangle, complex, points)
         for vertex in triangle:
             graph.add_edge(*tuple(triangle.difference({vertex})))
 
-        if not graph_connected == None and nx.is_connected(graph):
+        if not graph_connected and nx.is_connected(graph):
             graph_connected = True
 
         if graph_connected:
