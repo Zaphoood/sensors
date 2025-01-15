@@ -8,6 +8,7 @@ import numpy as np
 from geometry import geodesic_distance, get_circumcircle
 from plane_sweep import plane_sweep
 from util import Triangle, Vector, sort_edge, sort_triangle
+from miniball import get_max_enclosing_radius
 
 
 def get_adjacent_triangles(
@@ -140,3 +141,9 @@ def flip_edge(
 def get_delaunay(points: List[Vector]) -> List[Triangle]:
     triangulation = plane_sweep(points)
     return edge_flip(points, triangulation)
+
+
+def get_R(points: List[Vector]) -> float:
+    delaunay_triangulation = get_delaunay(points)
+
+    return get_max_enclosing_radius(points, delaunay_triangulation)

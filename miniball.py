@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from delaunay import get_circumcircle
+from geometry import get_circumcircle
 from util import Triangle, Vector, load_triangulation
 
 
