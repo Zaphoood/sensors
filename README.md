@@ -7,14 +7,17 @@
 
 ## Idea
 
-Given a set of sensors (e.g. weather stations) around the globe, represented as points on the unit sphere, we consider
-two parameters: Each sensor gathers data in the circle of sensing radius _R_, and can communicate with others distance
-which are at most the communication distance _r_ away.
+Given a set of sensors around the globe (e.g. weather stations), represented as points on the unit sphere, we consider
+two parameters: Each sensor gathers data in a circle of sensing radius _R_, and can communicate with others which are at
+most communication distance _r_ away.
 
 Our goal is to find
 
 - the minimum sensing radius _R_ such that the entire sphere can be observed
 - the minimum communication distance _r_ such that the network of sensors is connected.
+
+We compute _R_ by considering the Delaunay triangulation of the points on the sphere; the second one is computed by
+iterating over all pairwise distances of points.
 
 ## Installation
 
