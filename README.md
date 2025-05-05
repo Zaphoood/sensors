@@ -1,5 +1,21 @@
 # Sensors
 
+<p align="center">
+  <img src="./images/delaunay.png" width="40%"/>
+  <img src="./images/connected.png" width="40%"/>
+</p>
+
+## Idea
+
+Given a set of sensors (e.g. weather stations) around the globe, represented as points on the unit sphere, we consider
+two parameters: Each sensor gathers data in the circle of sensing radius _R_, and can communicate with others distance
+which are at most the communication distance _r_ away.
+
+Our goal is to find
+
+- the minimum sensing radius _R_ such that the entire sphere can be observed
+- the minimum communication distance _r_ such that the network of sensors is connected.
+
 ## Installation
 
 Python >= 3.10 is required. Install the necessary packages with `pip install -r requirements.txt`.
