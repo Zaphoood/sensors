@@ -5,6 +5,9 @@
   <img src="./images/connected.png" width="40%"/>
 </p>
 
+_This project was created as part of an assignment for the class 'Topological Data Analysis' at the Faculty of Computer
+Science of the University of Ljubljana, Slovenia._
+
 ## Idea
 
 Given a set of sensors around the globe (e.g. weather stations), represented as points on the unit sphere, we consider
@@ -16,8 +19,8 @@ Our goal is to find
 - the minimum sensing radius _R_ such that the entire sphere can be observed
 - the minimum communication distance _r_ such that the network of sensors is connected.
 
-We compute _R_ by considering the Delaunay triangulation of the points on the sphere; the second one is computed by
-iterating over all pairwise distances of points.
+We compute _R_ by considering the Delaunay triangulation of the points on the sphere, and compute _r_ by
+checking all pairwise distances of points.
 
 ## Installation
 
